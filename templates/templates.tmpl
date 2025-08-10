@@ -1,0 +1,9 @@
+NAME                DESCRIPTION
+{{- range .Templates}}
+{{.Name}}           {{.Description}}
+{{- end}}
+
+Usage:
+  Export templates: eol templates export <directory>
+  Use custom template directory: eol --template-dir <directory> <command>
+  Use inline template: eol <command> -t '{{"{{"}} .FieldName {{"}}"}}'

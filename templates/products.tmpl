@@ -1,0 +1,5 @@
+Products - {{.Total}} total:
+
+{{- range .Result}}
+{{.Name}}    {{.Label}}    {{.Category}}    {{join .Tags ", "}}
+{{- end}}

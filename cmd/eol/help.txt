@@ -1,0 +1,74 @@
+Usage:
+  eol [options] <command> [arguments]
+
+Commands:
+  index                           Show API endpoints
+  products [--full]               List all products (use --full for detailed info)
+  product <name>                  Get details for a specific product
+  release <product> <release>     Get specific release information (supports semantic versions)
+  latest <product>                Get latest release information
+  categories [category]           List categories or products in a category
+  tags [tag]                      List tags or products with a tag
+  identifiers [type]              List identifier types or identifiers by type
+  cache <stats|clear>             Cache management commands
+  templates [export <dir>]        List templates or export them for customization
+  completion [bash|zsh]           Generate shell completion scripts (auto-detects shell if not specified)
+  help                            Show this help message
+
+Options:
+  -f, --format <format>           Output format (text, json)
+  -t, --template <template>       Inline template for custom output formatting
+  --disable-cache                 Disable caching (ignored for --full)
+  --cache-dir <dir>               Cache directory (default: ~/.local/state/eol)
+  --cache-for <duration>          Cache TTL (default: 1h, examples: 30m, 2h, 1d)
+  --template-dir <dir>            Custom template directory (default: ~/.config/eol/templates)
+
+Examples:
+  eol products
+  eol product ubuntu
+  eol release ubuntu 22.04
+  eol release go 1.24.6
+  eol latest ubuntu
+  eol categories os
+  eol tags canonical
+  eol -f json product ubuntu
+  eol -t '{{.Name}} - {{.Category}}' product ubuntu
+  eol --template '{{.Latest.Name}}' latest go
+  eol -t '{{.Name}}: {{if .IsMaintained}}✅ Active{{else}}💀 EOL{{end}}' latest terraform
+  eol --template '{{join .Tags ", "}}' product go
+  eol -t '{{.TotalFiles}} files ({{.ValidFiles}} valid)' cache stats
+  eol --cache-for 2h product ubuntu
+  eol --disable-cache latest go
+  eol cache stats
+  eol cache clear
+  eol completion bash > ~/.bash_completion.d/eol
+  eol completion zsh > ~/.zsh/completions/_eol
+  eol completion >> ~/.bashrc  # Auto-detect shell
+  eol release go 1.17 -t '{{if .IsEol}}{{exit 1}}{{end}}'  # Exit code 1 if EOL (scripting)
+
+Caching Behavior:
+  Default cache: 1 hour for all endpoints except --full
+  --full endpoint: Always cached for 24 hours (cannot be disabled)
+  Cache location: ~/.local/state/eol/ (configurable with --cache-dir)
+  Cache format: JSON files with expiration metadata
+
+Template Customization:
+  eol templates                         # List available templates
+  eol templates export ~/my-templates   # Export default templates for editing
+  eol --template-dir ~/my-templates product go
+
+  Available template functions:
+    join .Tags ", "                     # Join arrays with separator
+    add .A .B                           # Addition
+    sub .A .B                           # Subtraction
+    div .A .B                           # Division (float64)
+    mul .A .B                           # Multiplication (float64)
+    default "fallback" .Field           # Default values for empty fields
+    toJSON .                            # Convert to JSON format
+    slice .Releases 0 5                 # Slice operations
+    exit 1                              # Exit with error code (for scripting)
+
+  Quick start:
+    eol templates export ~/.config/eol/templates
+    # Edit the exported .tmpl files, then use normally:
+    eol product go

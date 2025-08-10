@@ -1,0 +1,232 @@
+version: "2"
+linters:
+  default: all
+  disable:
+    - embeddedstructfieldcheck
+    - exhaustruct
+    - noinlineerr
+    - nonamedreturns
+    - tagliatelle
+    - testpackage
+    - wrapcheck
+    - wsl # deprecated
+  settings:
+    cyclop:
+      max-complexity: 15 # default: 10
+      package-average: 0.5
+    decorder:
+      disable-dec-num-check: true
+      disable-dec-order-check: false
+    depguard:
+      rules:
+        self:
+          allow:
+            - $gostd
+            - github.com/alexaandru/eol
+    errcheck:
+      #severity: warn
+      disable-default-exclusions: false
+      check-type-assertions: true
+      check-blank: true
+    errchkjson:
+      #severity: Warn
+      report-no-exported: true
+    errorlint:
+      asserts: true
+    exhaustive:
+      check:
+        - switch
+        - map
+      default-signifies-exhaustive: true
+    forbidigo:
+      forbid:
+        - pattern: "context.Background"
+          msg: "Use t.Context() in tests instead of context.Background()"
+        - pattern: "context.TODO"
+          msg: "Use t.Context() in tests instead of context.TODO()"
+    funlen:
+      lines: 60
+      statements: 40
+      ignore-comments: true
+    gocognit:
+      min-complexity: 15 # default: 10
+    goconst:
+      min-occurrences: 6
+    gocritic:
+      disabled-checks:
+        - commentFormatting
+        - exposedSyncMutex
+        - commentedOutCode
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+        - experimental
+        - opinionated
+      settings:
+        captLocal:
+          paramsOnly: false
+        elseif:
+          skipBalanced: true
+        hugeParam:
+          sizeThreshold: 80
+        nestingReduce:
+          bodyWidth: 5
+        rangeExprCopy:
+          sizeThreshold: 512
+          skipTestFuncs: true
+        rangeValCopy:
+          sizeThreshold: 201
+          skipTestFuncs: true
+        truncateCmp:
+          skipArchDependent: true
+        underef:
+          skipRecvDeref: true
+    gocyclo:
+      min-complexity: 15 # default: 10
+    godot:
+      scope: all
+      exclude:
+        - ^ HAS_.*
+        - ^ \[.*\]$
+      capital: true
+    gosec:
+      config:
+        G302: "0640"
+        G306: "0640"
+    govet:
+      enable-all: true
+      settings:
+        shadow:
+          strict: true
+    ireturn:
+      allow:
+        - empty
+        - error
+        - stdlib
+        - generic
+    lll:
+      line-length: 120
+    maintidx:
+      under: 20
+    makezero:
+      always: false
+    mnd:
+      ignored-numbers: ["2"]
+    nakedret:
+      max-func-lines: 60
+    nestif:
+      min-complexity: 5
+    nlreturn:
+      block-size: 2
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: false
+    predeclared:
+      qualified-name: false
+    revive:
+      rules:
+        - name: exported
+          disabled: false
+    testpackage:
+      skip-regexp: (export|internal)_test\.go
+    thelper:
+      test:
+        first: true
+        name: true
+        begin: true
+      benchmark:
+        first: true
+        name: true
+        begin: true
+      tb:
+        first: true
+        name: true
+        begin: true
+    unparam:
+      check-exported: true
+    unused:
+      field-writes-are-uses: true
+      post-statements-are-reads: false
+      exported-fields-are-used: false
+      parameters-are-used: true
+      local-variables-are-used: false
+      generated-is-used: false
+    varnamelen:
+      max-distance: 25
+      min-name-length: 2
+      check-receiver: false
+      check-return: true
+      check-type-param: true
+      ignore-names:
+        - err
+      ignore-type-assert-ok: true
+      ignore-map-index-ok: true
+      ignore-chan-recv-ok: true
+      ignore-decls:
+        - i int
+        - j int
+        - t testing.T
+        - b testing.B
+        - T any
+        - f *os.File
+        - c Client
+        - c Config
+        - c *Client
+        - c *Config
+    wsl:
+      strict-append: true
+      allow-assign-and-call: true
+      allow-multiline-assign: true
+      force-case-trailing-whitespace: 0
+      allow-trailing-comment: false
+      allow-separated-leading-comment: false
+      allow-cuddle-declarations: false
+      force-err-cuddling: false
+  exclusions:
+    warn-unused: true
+    generated: strict
+    rules:
+      - linters: [errcheck]
+        text: Error return value of `c.Print
+      - linters: [forbidigo]
+        text: Use t.Context
+        path-except: _test\.go
+      - linters: [gosec]
+        text: G104
+        source: c.Print
+      - linters:
+          - bodyclose
+          - cyclop
+          - dupl
+          - err113
+          - errcheck
+          - forcetypeassert
+          - funlen
+          - gocognit
+          - gocyclo
+          - gosec
+          - lll
+        path: _test\.go
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+  fix: false
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+    gofumpt:
+      extra-rules: true
+output:
+  show-stats: true

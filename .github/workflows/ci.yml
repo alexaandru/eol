@@ -1,0 +1,27 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+jobs:
+  Test:
+    runs-on: ubuntu-latest
+    steps:
+      - &checkout
+        uses: actions/checkout@v4
+      - &setup-go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
+      - run: make test
+        # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions
+      - run: echo "::notice title=Test Coverage::$(go tool cover -func=unit.cov|tail -n1|tr -s "\t")"
+  Lint:
+    runs-on: ubuntu-latest
+    needs: [Test]
+    steps:
+      - *checkout
+      - *setup-go
+      - run: make lint
+      - run: make shellcheck
