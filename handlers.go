@@ -169,57 +169,33 @@ func (c *Client) Handle() (err error) {
 func (c *Client) Format(response any) ([]byte, error) {
 	switch resp := response.(type) {
 	case *IndexResponse:
-		return c.templateManager.Execute("index", resp.UriListResponse)
+		return c.templateManager.Execute("index", c.extractTemplateData(resp))
 	case *CategoriesResponse:
-		return c.templateManager.Execute("categories", resp.UriListResponse)
+		return c.templateManager.Execute("categories", c.extractTemplateData(resp))
 	case *TagsResponse:
-		return c.templateManager.Execute("tags", resp.UriListResponse)
+		return c.templateManager.Execute("tags", c.extractTemplateData(resp))
 	case *IdentifierTypesResponse:
-		return c.templateManager.Execute("identifiers", resp.UriListResponse)
+		return c.templateManager.Execute("identifiers", c.extractTemplateData(resp))
 	case *ProductListResponse:
-		return c.templateManager.Execute("products", resp)
+		return c.templateManager.Execute("products", c.extractTemplateData(resp))
 	case *FullProductListResponse:
 		return c.FormatFullProducts(resp)
 	case *ProductResponse:
-		return c.templateManager.Execute("product_details", &resp.Result)
+		return c.templateManager.Execute("product_details", c.extractTemplateData(resp))
 	case *ProductReleaseResponse:
-		return c.templateManager.Execute("product_release", &resp.Result)
+		return c.templateManager.Execute("product_release", c.extractTemplateData(resp))
 	case *CategoryProductsResponse:
-		data := struct {
-			*ProductListResponse
-			Category string
-		}{
-			ProductListResponse: resp.ProductListResponse,
-			Category:            resp.Category,
-		}
-
-		return c.templateManager.Execute("products_by_category", data)
+		return c.templateManager.Execute("products_by_category", c.extractTemplateData(resp))
 	case *TagProductsResponse:
-		data := struct {
-			*ProductListResponse
-			Tag string
-		}{
-			ProductListResponse: resp.ProductListResponse,
-			Tag:                 resp.Tag,
-		}
-
-		return c.templateManager.Execute("products_by_tag", data)
+		return c.templateManager.Execute("products_by_tag", c.extractTemplateData(resp))
 	case *TypeIdentifiersResponse:
-		data := struct {
-			*IdentifierListResponse
-			Type string
-		}{
-			IdentifierListResponse: resp.IdentifierListResponse,
-			Type:                   resp.Type,
-		}
-
-		return c.templateManager.Execute("identifiers_by_type", data)
+		return c.templateManager.Execute("identifiers_by_type", c.extractTemplateData(resp))
 	case *CacheStats:
-		return c.templateManager.Execute("cache_stats", resp)
+		return c.templateManager.Execute("cache_stats", c.extractTemplateData(resp))
 	case *TemplateListResponse:
-		return c.templateManager.Execute("templates", resp)
+		return c.templateManager.Execute("templates", c.extractTemplateData(resp))
 	case *TemplateExportResponse:
-		return c.templateManager.Execute("template_export", resp)
+		return c.templateManager.Execute("template_export", c.extractTemplateData(resp))
 	case *CompletionResponse:
 		return []byte(resp.Script), nil
 	default:
@@ -549,7 +525,9 @@ func (c *Client) outputJSON(data any) error {
 }
 
 // executeInlineTemplate executes an inline template on the given data.
-func (c *Client) executeInlineTemplate(data any) error {
+func (c *Client) executeInlineTemplate(response any) error {
+	data := c.extractTemplateData(response)
+
 	result, err := c.templateManager.ExecuteInline(c.config.InlineTemplate, data)
 	if err != nil {
 		return fmt.Errorf("failed to execute inline template: %w", err)
@@ -558,6 +536,65 @@ func (c *Client) executeInlineTemplate(data any) error {
 	c.Print(string(result))
 
 	return nil
+}
+
+// extractTemplateData extracts the appropriate data from response objects for template execution.
+// This function contains the shared logic used by both Format() and executeInlineTemplate().
+//
+//nolint:gocyclo,cyclop // ok
+func (c *Client) extractTemplateData(response any) any {
+	switch resp := response.(type) {
+	case *IndexResponse:
+		return resp.UriListResponse
+	case *CategoriesResponse:
+		return resp.UriListResponse
+	case *TagsResponse:
+		return resp.UriListResponse
+	case *IdentifierTypesResponse:
+		return resp.UriListResponse
+	case *ProductListResponse:
+		return resp
+	case *FullProductListResponse:
+		return resp
+	case *ProductResponse:
+		return &resp.Result
+	case *ProductReleaseResponse:
+		return &resp.Result
+	case *CategoryProductsResponse:
+		return struct {
+			*ProductListResponse
+			Category string
+		}{
+			ProductListResponse: resp.ProductListResponse,
+			Category:            resp.Category,
+		}
+	case *TagProductsResponse:
+		return struct {
+			*ProductListResponse
+			Tag string
+		}{
+			ProductListResponse: resp.ProductListResponse,
+			Tag:                 resp.Tag,
+		}
+	case *TypeIdentifiersResponse:
+		return struct {
+			*IdentifierListResponse
+			Type string
+		}{
+			IdentifierListResponse: resp.IdentifierListResponse,
+			Type:                   resp.Type,
+		}
+	case *CacheStats:
+		return resp
+	case *TemplateListResponse:
+		return resp
+	case *TemplateExportResponse:
+		return resp
+	case *CompletionResponse:
+		return resp
+	default:
+		return response
+	}
 }
 
 func (c *Client) normReleaseArgs(args []string) (ret []string, err error) {

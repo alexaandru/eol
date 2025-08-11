@@ -3,6 +3,7 @@ package eol
 import (
 	"bytes"
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -1149,6 +1150,128 @@ func TestClientFormat(t *testing.T) {
 	}
 }
 
+func TestClientExtractTemplateData(t *testing.T) {
+	t.Parallel()
+
+	responses := createMockResponses(t)
+	client := createTestClient(t, t.Context(), responses, "index", []string{})
+
+	//nolint:govet // ok
+	tests := []struct {
+		name         string
+		response     any
+		expectedType string
+		checkFunc    func(t *testing.T, data any)
+	}{
+		{
+			name:         "IndexResponse extracts UriListResponse",
+			response:     &IndexResponse{UriListResponse: &UriListResponse{Result: []Uri{{Name: "test", URI: "/test"}}}},
+			expectedType: "*eol.UriListResponse",
+			checkFunc: func(t *testing.T, data any) {
+				t.Helper()
+
+				if resp, ok := data.(*UriListResponse); !ok {
+					t.Errorf("Expected *UriListResponse, got %T", data)
+				} else if len(resp.Result) != 1 || resp.Result[0].Name != "test" {
+					t.Errorf("Expected result with 'test', got %v", resp.Result)
+				}
+			},
+		},
+		{
+			name:         "ProductResponse extracts Result field",
+			response:     &ProductResponse{Result: ProductDetails{Name: "go", Category: "lang"}},
+			expectedType: "*eol.ProductDetails",
+			checkFunc: func(t *testing.T, data any) {
+				t.Helper()
+
+				if resp, ok := data.(*ProductDetails); !ok {
+					t.Errorf("Expected *ProductDetails, got %T", data)
+				} else if resp.Name != "go" || resp.Category != "lang" {
+					t.Errorf("Expected go/lang, got %s/%s", resp.Name, resp.Category)
+				}
+			},
+		},
+		{
+			name:         "ProductReleaseResponse extracts Result field",
+			response:     &ProductReleaseResponse{Result: ProductRelease{Name: "1.21", IsLts: true}},
+			expectedType: "*eol.ProductRelease",
+			checkFunc: func(t *testing.T, data any) {
+				t.Helper()
+
+				if resp, ok := data.(*ProductRelease); !ok {
+					t.Errorf("Expected *ProductRelease, got %T", data)
+				} else if resp.Name != "1.21" || !resp.IsLts {
+					t.Errorf("Expected 1.21/true, got %s/%t", resp.Name, resp.IsLts)
+				}
+			},
+		},
+		{
+			name:     "CategoryProductsResponse creates composite struct",
+			response: &CategoryProductsResponse{ProductListResponse: &ProductListResponse{Result: []ProductSummary{{Name: "test"}}}, Category: "lang"},
+			checkFunc: func(t *testing.T, data any) {
+				t.Helper()
+
+				// Use reflection to check the anonymous struct.
+				if val := reflect.ValueOf(data); val.Kind() == reflect.Struct {
+					categoryField := val.FieldByName("Category")
+					if !categoryField.IsValid() || categoryField.String() != "lang" {
+						t.Errorf("Expected Category field with 'lang', got %v", categoryField)
+					}
+				} else {
+					t.Errorf("Expected struct, got %T", data)
+				}
+			},
+		},
+		{
+			name:         "CacheStats returns as-is",
+			response:     &CacheStats{TotalFiles: 42, ValidFiles: 30},
+			expectedType: "*eol.CacheStats",
+			checkFunc: func(t *testing.T, data any) {
+				t.Helper()
+
+				if resp, ok := data.(*CacheStats); !ok {
+					t.Errorf("Expected *CacheStats, got %T", data)
+				} else if resp.TotalFiles != 42 || resp.ValidFiles != 30 {
+					t.Errorf("Expected 42/30, got %d/%d", resp.TotalFiles, resp.ValidFiles)
+				}
+			},
+		},
+		{
+			name:         "Unknown type returns as-is",
+			response:     "unknown",
+			expectedType: "string",
+			checkFunc: func(t *testing.T, data any) {
+				t.Helper()
+
+				if str, ok := data.(string); !ok {
+					t.Errorf("Expected string, got %T", data)
+				} else if str != "unknown" {
+					t.Errorf("Expected 'unknown', got %s", str)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			data := client.extractTemplateData(tt.response)
+
+			if tt.expectedType != "" {
+				actualType := reflect.TypeOf(data).String()
+				if actualType != tt.expectedType {
+					t.Errorf("Expected type %s, got %s", tt.expectedType, actualType)
+				}
+			}
+
+			if tt.checkFunc != nil {
+				tt.checkFunc(t, data)
+			}
+		})
+	}
+}
+
 func TestClientFormatFullProducts(t *testing.T) {
 	t.Parallel()
 
@@ -1388,7 +1511,7 @@ func TestClientHandleWithInlineTemplate(t *testing.T) {
 			name:         "template with product data",
 			command:      "product",
 			args:         []string{"go"},
-			template:     "Product: {{.Result.Name}}",
+			template:     "Product: {{.Name}}",
 			expectOutput: "Product: go",
 		},
 	}

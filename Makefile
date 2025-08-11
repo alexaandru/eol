@@ -1,4 +1,5 @@
 all: fmt lint actionlint vulncheck deadcode shellcheck test
+	@./test_inline_templates.sh
 
 build:
 	go build -o eol ./cmd
