@@ -70,7 +70,8 @@ type CompletionResponse struct {
 
 var (
 	// ErrNeedHelp indicates that help was requested by the user.
-	ErrNeedHelp                   = errors.New("help requested")
+	ErrNeedHelp = errors.New("help requested")
+
 	errProductReleaseNameRequired = errors.New("product name and release name required")
 	errProductNameRequired        = errors.New("product name is required")
 	errCacheSubcommandRequired    = errors.New("cache subcommand is required (stats, clear)")
@@ -87,7 +88,7 @@ var zshCompletionScript string
 
 // Handle represents the main entry point for handling commands.
 //
-//nolint:nakedret,gocyclo,cyclop,funlen // ok
+//nolint:gocyclo,cyclop,funlen // ok
 func (c *Client) Handle() (err error) {
 	c.response = nil
 	c.responseHeader = ""
@@ -136,7 +137,7 @@ func (c *Client) Handle() (err error) {
 	}
 
 	if c.response == nil {
-		return nil
+		return
 	}
 
 	if c.config.HasInlineTemplate() {
@@ -147,20 +148,18 @@ func (c *Client) Handle() (err error) {
 		return c.outputJSON(c.response)
 	}
 
-	// Print custom header if set.
 	if c.responseHeader != "" {
 		c.Printf("%s\n\n", c.responseHeader)
 	}
 
-	// Format and print the response.
 	text, err := c.Format(c.response)
 	if err != nil {
-		return err
+		return
 	}
 
 	c.Print(string(text))
 
-	return nil
+	return
 }
 
 // Format formats the given response according to the client's configuration settings.
@@ -462,7 +461,6 @@ func (c *Client) HandleTemplateExport() (err error) {
 	}
 
 	outputDir := args[0]
-
 	if err = c.templateManager.ExportTemplates(outputDir); err != nil {
 		return fmt.Errorf("failed to export templates: %w", err)
 	}
@@ -480,11 +478,7 @@ func (c *Client) HandleTemplateExport() (err error) {
 func (c *Client) HandleCompletionAuto() (err error) { //nolint:unparam // ok
 	shell := c.detectShell()
 	script := c.generateCompletionScript(shell)
-
-	c.response = &CompletionResponse{
-		Shell:  shell,
-		Script: script,
-	}
+	c.response = &CompletionResponse{Shell: shell, Script: script}
 	c.responseHeader = fmt.Sprintf("# %s completion script", shell)
 
 	return
@@ -493,11 +487,7 @@ func (c *Client) HandleCompletionAuto() (err error) { //nolint:unparam // ok
 // HandleCompletionBash handles bash completion.
 func (c *Client) HandleCompletionBash() (err error) { //nolint:unparam // ok
 	script := c.generateCompletionScript("bash")
-
-	c.response = &CompletionResponse{
-		Shell:  "bash",
-		Script: script,
-	}
+	c.response = &CompletionResponse{Shell: "bash", Script: script}
 	c.responseHeader = "# bash completion script"
 
 	return
@@ -506,11 +496,7 @@ func (c *Client) HandleCompletionBash() (err error) { //nolint:unparam // ok
 // HandleCompletionZsh handles zsh completion.
 func (c *Client) HandleCompletionZsh() (err error) { //nolint:unparam // ok
 	script := c.generateCompletionScript("zsh")
-
-	c.response = &CompletionResponse{
-		Shell:  "zsh",
-		Script: script,
-	}
+	c.response = &CompletionResponse{Shell: "zsh", Script: script}
 	c.responseHeader = "# zsh completion script"
 
 	return
@@ -525,7 +511,7 @@ func (c *Client) outputJSON(data any) error {
 }
 
 // executeInlineTemplate executes an inline template on the given data.
-func (c *Client) executeInlineTemplate(response any) error {
+func (c *Client) executeInlineTemplate(response any) (err error) {
 	data := c.extractTemplateData(response)
 
 	result, err := c.templateManager.ExecuteInline(c.config.InlineTemplate, data)
@@ -535,7 +521,7 @@ func (c *Client) executeInlineTemplate(response any) error {
 
 	c.Print(string(result))
 
-	return nil
+	return
 }
 
 // extractTemplateData extracts the appropriate data from response objects for template execution.
@@ -564,26 +550,17 @@ func (c *Client) extractTemplateData(response any) any {
 		return struct {
 			*ProductListResponse
 			Category string
-		}{
-			ProductListResponse: resp.ProductListResponse,
-			Category:            resp.Category,
-		}
+		}{ProductListResponse: resp.ProductListResponse, Category: resp.Category}
 	case *TagProductsResponse:
 		return struct {
 			*ProductListResponse
 			Tag string
-		}{
-			ProductListResponse: resp.ProductListResponse,
-			Tag:                 resp.Tag,
-		}
+		}{ProductListResponse: resp.ProductListResponse, Tag: resp.Tag}
 	case *TypeIdentifiersResponse:
 		return struct {
 			*IdentifierListResponse
 			Type string
-		}{
-			IdentifierListResponse: resp.IdentifierListResponse,
-			Type:                   resp.Type,
-		}
+		}{IdentifierListResponse: resp.IdentifierListResponse, Type: resp.Type}
 	case *CacheStats:
 		return resp
 	case *TemplateListResponse:
@@ -640,9 +617,7 @@ func (c *Client) generateCompletionScript(shell string) string {
 
 // preRouting flattens subcommands into path-based routing.
 func (c *Client) preRouting(cmd string) string {
-	args := c.config.Args
-
-	switch cmd {
+	switch args := c.config.Args; cmd {
 	case "cache":
 		if len(args) > 0 {
 			return "cache/" + args[0]

@@ -114,7 +114,7 @@ linters:
     mnd:
       ignored-numbers: ["2"]
     nakedret:
-      max-func-lines: 60
+      max-func-lines: 72
     nestif:
       min-complexity: 5
     nlreturn:

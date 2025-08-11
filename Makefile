@@ -40,6 +40,9 @@ doc:
 	@go tool -modfile=tools/go.mod godoc -http=:6060 &
 	@xdg-open http://localhost:6060/pkg/github.com/alexaandru/eol/
 
+coverage_map: test
+	@go tool -modfile=tools/go.mod go-cover-treemap -coverprofile unit.cov > unit.svg
+
 clean:
 	@rm -f eol eol.test *.cov
 	@killall -q godoc || true

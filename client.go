@@ -31,22 +31,17 @@ type Client struct {
 // Option represents a functional option for configuring a Client.
 type Option func(*Client)
 
+// Default values.
 const (
-	// DefaultTimeout is the default HTTP client timeout.
-	DefaultTimeout = 30 * time.Second
-
-	// DefaultCacheTTL is the default cache time-to-live duration.
+	DefaultTimeout  = 30 * time.Second
 	DefaultCacheTTL = time.Hour
-
-	// UserAgent is the user agent string sent with requests.
-	UserAgent = "eol-go-client/1.0"
-
-	defaultBaseURL = "https://endoflife.date/api/v1"
+	UserAgent       = "eol-go-client/1.0"
+	DefaultBaseURL  = "https://endoflife.date/api/v1"
 )
 
 // New creates a new endoflife.date API client with default settings.
 //
-//nolint:gocognit,nakedret // ok
+//nolint:gocognit // ok
 func New(opts ...Option) (c *Client, err error) {
 	c = &Client{userAgent: UserAgent}
 
@@ -55,7 +50,7 @@ func New(opts ...Option) (c *Client, err error) {
 	}
 
 	if c.baseURL == nil {
-		c.baseURL, err = url.Parse(defaultBaseURL)
+		c.baseURL, err = url.Parse(DefaultBaseURL)
 		if err != nil {
 			return
 		}

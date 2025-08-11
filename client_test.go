@@ -31,8 +31,8 @@ func TestNew(t *testing.T) {
 		t.Fatal("baseURL is nil")
 	}
 
-	if client.baseURL.String() != defaultBaseURL {
-		t.Errorf("Expected baseURL %s, got %s", defaultBaseURL, client.baseURL.String())
+	if client.baseURL.String() != DefaultBaseURL {
+		t.Errorf("Expected baseURL %s, got %s", DefaultBaseURL, client.baseURL.String())
 	}
 
 	if client.httpClient == nil {
@@ -532,8 +532,8 @@ func newProductResponseBody() string {
 func TestConstants(t *testing.T) {
 	t.Parallel()
 
-	if defaultBaseURL != "https://endoflife.date/api/v1" {
-		t.Errorf("Expected defaultBaseURL to be 'https://endoflife.date/api/v1', got %s", defaultBaseURL)
+	if DefaultBaseURL != "https://endoflife.date/api/v1" {
+		t.Errorf("Expected defaultBaseURL to be 'https://endoflife.date/api/v1', got %s", DefaultBaseURL)
 	}
 
 	if DefaultTimeout != 30*time.Second {

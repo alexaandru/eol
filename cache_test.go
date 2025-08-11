@@ -451,7 +451,6 @@ func TestCacheManagerMustUseCache(t *testing.T) {
 func TestCacheManagerGetReleaseFromProductCache(t *testing.T) {
 	t.Parallel()
 
-	cm := NewCacheManager(t.TempDir(), true, time.Hour)
 	productData := map[string]any{
 		"schema_version": "1.2.0",
 		"last_modified":  "2025-01-11T00:00:00Z",
@@ -486,10 +485,6 @@ func TestCacheManagerGetReleaseFromProductCache(t *testing.T) {
 				},
 			},
 		},
-	}
-
-	if err := cm.Set("/products/go", productData, "go"); err != nil {
-		t.Fatalf("Failed to cache product data: %v", err)
 	}
 
 	//nolint:govet // ok
@@ -542,6 +537,11 @@ func TestCacheManagerGetReleaseFromProductCache(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
+			cm := NewCacheManager(t.TempDir(), true, time.Hour)
+			if err := cm.Set("/products/go", productData, "go"); err != nil {
+				t.Fatalf("Failed to cache product data: %v", err)
+			}
 
 			releaseData, found := cm.GetReleaseFromProductCache(tt.product, tt.release)
 

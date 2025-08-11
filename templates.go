@@ -30,8 +30,8 @@ type TemplateInfo struct {
 }
 
 const (
-	dirPerm  = 0o750 // Directory permissions: owner rwx, group r-x, others none.
-	filePerm = 0o640 // File permissions: owner rw-, group r--, others none.
+	dirPerm  = 0o750
+	filePerm = 0o640
 )
 
 //go:embed templates/*.tmpl
@@ -75,8 +75,7 @@ func (tm *TemplateManager) Execute(name string, data any) ([]byte, error) {
 		return nil, fmt.Errorf("template %s not found", name) //nolint:err113 // TODO
 	}
 
-	var buf bytes.Buffer
-
+	buf := bytes.Buffer{}
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return nil, fmt.Errorf("failed to execute template %s: %w", name, err)
 	}
@@ -95,14 +94,13 @@ func GetEmbeddedTemplateContent(path string) ([]byte, error) {
 }
 
 // ExecuteInlineTemplate executes an inline template string with the same function map.
-func ExecuteInlineTemplate(templateStr string, data any) ([]byte, error) {
+func ExecuteInlineTemplate(templateStr string, data any) (_ []byte, err error) {
 	tmpl, err := template.New("inline").Funcs(getTemplateFuncMap()).Parse(templateStr)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	var buf bytes.Buffer
-
+	buf := bytes.Buffer{}
 	if execErr := tmpl.Execute(&buf, data); execErr != nil {
 		return nil, execErr
 	}
@@ -156,14 +154,13 @@ func (tm *TemplateManager) ExportTemplates(outputDir string) (err error) {
 }
 
 // ExecuteInline executes an inline template string with the template manager's function map.
-func (tm *TemplateManager) ExecuteInline(templateStr string, data any) ([]byte, error) {
+func (tm *TemplateManager) ExecuteInline(templateStr string, data any) (_ []byte, err error) {
 	tmpl, err := template.New("inline").Funcs(tm.funcMap).Parse(templateStr)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	var buf bytes.Buffer
-
+	buf := bytes.Buffer{}
 	if execErr := tmpl.Execute(&buf, data); execErr != nil {
 		return nil, execErr
 	}

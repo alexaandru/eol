@@ -1,7 +1,8 @@
 package eol
 
 import (
-	"crypto/md5" //nolint:gosec // MD5 is fine for cache keys
+	"cmp"
+	"crypto/md5" //nolint:gosec // fine for cache keys
 	"encoding/json"
 	"fmt"
 	"os"
@@ -25,7 +26,7 @@ type CacheStats struct {
 	CacheDir     string `json:"cache_dir"`
 	DefaultTTL   string `json:"default_ttl"`
 	FullTTL      string `json:"full_ttl"`
-	TotalSize    int64  `json:"total_size"`
+	TotalSize    int    `json:"total_size"`
 	TotalFiles   int    `json:"total_files"`
 	ExpiredFiles int    `json:"expired_files"`
 	ValidFiles   int    `json:"valid_files"`
@@ -37,8 +38,11 @@ type CacheManager struct {
 	baseDir    string
 	enabled    bool
 	defaultTTL time.Duration
-	fullTTL    time.Duration // Special TTL for --full endpoints (24h).
+	fullTTL    time.Duration
 }
+
+// The TTL used for full endpoints (e.g., /products/full).
+const fullTTL = 24 * time.Hour
 
 // NewCacheManager creates a new cache manager.
 func NewCacheManager(baseDir string, enabled bool, defaultTTL time.Duration) *CacheManager {
@@ -60,7 +64,7 @@ func NewCacheManager(baseDir string, enabled bool, defaultTTL time.Duration) *Ca
 		baseDir:    baseDir,
 		enabled:    enabled,
 		defaultTTL: defaultTTL,
-		fullTTL:    24 * time.Hour, //nolint:mnd // full always cached for 24h.
+		fullTTL:    fullTTL,
 	}
 }
 
@@ -75,33 +79,32 @@ func (cm *CacheManager) SetDefaultTTL(ttl time.Duration) {
 }
 
 // Get retrieves data from cache if valid.
-func (cm *CacheManager) Get(endpoint string, params ...string) (json.RawMessage, bool) {
+func (cm *CacheManager) Get(endpoint string, params ...string) (_ json.RawMessage, found bool) {
 	// For --full endpoints, always check cache regardless of enabled flag.
 	if !cm.enabled && !cm.isFullEndpoint(endpoint) {
-		return nil, false
+		return
 	}
 
 	key := cm.generateCacheKey(endpoint, params...)
 	filePath := cm.getCacheFilePath(key)
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return nil, false
+		return
 	}
 
 	data, err := os.ReadFile(filePath) //nolint:gosec // Reading cache file is safe
 	if err != nil {
-		return nil, false
+		return
 	}
 
-	var entry CacheEntry
-
+	entry := CacheEntry{}
 	if err = json.Unmarshal(data, &entry); err != nil {
-		return nil, false
+		return
 	}
 
 	if time.Now().After(entry.ExpiresAt) {
 		os.Remove(filePath) //nolint:errcheck,gosec // TODO
-		return nil, false
+		return
 	}
 
 	return entry.Data, true
@@ -145,7 +148,7 @@ func (cm *CacheManager) Set(endpoint string, data any, params ...string) (err er
 	key := cm.generateCacheKey(endpoint, params...)
 	filePath := cm.getCacheFilePath(key)
 
-	if err = os.WriteFile(filePath, jsonData, 0o640); err != nil { //nolint:mnd // it's a file permission
+	if err = os.WriteFile(filePath, jsonData, filePerm); err != nil {
 		return fmt.Errorf("failed to write cache file: %w", err)
 	}
 
@@ -184,8 +187,7 @@ func (cm *CacheManager) ClearExpired() (err error) {
 			continue
 		}
 
-		var cacheEntry CacheEntry
-
+		cacheEntry := CacheEntry{}
 		if err = json.Unmarshal(data, &cacheEntry); err != nil {
 			continue
 		}
@@ -210,16 +212,11 @@ func (cm *CacheManager) GetStats() (stats CacheStats, err error) {
 	}
 
 	stats = CacheStats{
-		Enabled:      cm.enabled,
-		CacheDir:     cm.baseDir,
-		DefaultTTL:   cm.defaultTTL.String(),
-		FullTTL:      cm.fullTTL.String(),
-		TotalFiles:   0,
-		TotalSize:    int64(0),
-		ExpiredFiles: 0,
-		ValidFiles:   0,
+		Enabled:    cm.enabled,
+		CacheDir:   cm.baseDir,
+		DefaultTTL: cm.defaultTTL.String(),
+		FullTTL:    cm.fullTTL.String(),
 	}
-
 	now := time.Now()
 
 	for _, entry := range entries {
@@ -236,7 +233,7 @@ func (cm *CacheManager) GetStats() (stats CacheStats, err error) {
 		}
 
 		stats.TotalFiles++
-		stats.TotalSize += fileInfo.Size()
+		stats.TotalSize += int(fileInfo.Size())
 
 		var data []byte
 
@@ -245,8 +242,7 @@ func (cm *CacheManager) GetStats() (stats CacheStats, err error) {
 			continue
 		}
 
-		var cacheEntry CacheEntry
-
+		cacheEntry := CacheEntry{}
 		if err = json.Unmarshal(data, &cacheEntry); err != nil {
 			continue
 		}
@@ -270,48 +266,50 @@ func (cm *CacheManager) MustUseCache(endpoint string) bool {
 // Returns the release data and true if found, nil and false if not found or not cached.
 //
 //nolint:gocognit // ok
-func (cm *CacheManager) GetReleaseFromProductCache(product, release string) (json.RawMessage, bool) {
+func (cm *CacheManager) GetReleaseFromProductCache(product, release string) (_ json.RawMessage, found bool) {
 	if !cm.enabled {
-		return nil, false
+		return
 	}
 
 	productEndpoint := "/products/" + product
 
-	productCache, found := cm.Get(productEndpoint, product)
-	if !found {
-		return nil, false
+	productCache, ok := cm.Get(productEndpoint, product)
+	if !ok {
+		return
 	}
 
-	var fullProductResponse map[string]any
-
+	fullProductResponse := map[string]any{}
 	if err := json.Unmarshal(productCache, &fullProductResponse); err != nil {
-		return nil, false
+		return
 	}
 
 	result, ok := fullProductResponse["result"].(map[string]any)
 	if !ok {
-		return nil, false
+		return
 	}
 
 	releases, ok := result["releases"].([]any)
 	if !ok {
-		return nil, false
+		return
 	}
 
 	for _, r := range releases {
-		releaseMap, ok := r.(map[string]any) //nolint:govet // ok
+		var (
+			releaseMap map[string]any
+			name       string
+		)
+
+		releaseMap, ok = r.(map[string]any)
 		if !ok {
 			continue
 		}
 
-		name, ok := releaseMap["name"].(string)
+		name, ok = releaseMap["name"].(string)
 		if !ok {
 			continue
 		}
 
-		// Check both original and normalized release names.
 		if name == release || name == normalizeVersion(release) {
-			// Create a ProductReleaseResponse format.
 			releaseResponse := map[string]any{
 				"schema_version": fullProductResponse["schema_version"],
 				"result":         releaseMap,
@@ -319,47 +317,51 @@ func (cm *CacheManager) GetReleaseFromProductCache(product, release string) (jso
 
 			releaseJSON, err := json.Marshal(releaseResponse)
 			if err != nil {
-				return nil, false
+				return
 			}
 
 			return releaseJSON, true
 		}
 	}
 
-	return nil, false
+	return
 }
 
 // GetProductFromFullCache attempts to find a specific product in cached ProductsFull data.
 // Returns the product data and true if found, nil and false if not found or not cached.
-func (cm *CacheManager) GetProductFromFullCache(product string) (json.RawMessage, bool) {
+func (cm *CacheManager) GetProductFromFullCache(product string) (_ json.RawMessage, found bool) {
 	if !cm.enabled {
-		return nil, false
+		return
 	}
 
 	// Look for cached ProductsFull data.
-	fullCache, found := cm.Get("/products/full")
-	if !found {
-		return nil, false
-	}
-
-	var fullResponse map[string]any
-
-	if err := json.Unmarshal(fullCache, &fullResponse); err != nil {
-		return nil, false
-	}
-
-	result, ok := fullResponse["result"].([]any)
+	fullCache, ok := cm.Get("/products/full")
 	if !ok {
-		return nil, false
+		return
+	}
+
+	fullResponse := map[string]any{}
+	if err := json.Unmarshal(fullCache, &fullResponse); err != nil {
+		return
+	}
+
+	result, found := fullResponse["result"].([]any)
+	if !found {
+		return
 	}
 
 	for _, p := range result {
-		productMap, ok := p.(map[string]any) //nolint:govet // ok
+		var (
+			productMap map[string]any
+			name       string
+		)
+
+		productMap, ok = p.(map[string]any)
 		if !ok {
 			continue
 		}
 
-		name, ok := productMap["name"].(string)
+		name, ok = productMap["name"].(string)
 		if !ok {
 			continue
 		}
@@ -373,40 +375,39 @@ func (cm *CacheManager) GetProductFromFullCache(product string) (json.RawMessage
 
 			productJSON, err := json.Marshal(productResponse)
 			if err != nil {
-				return nil, false
+				return
 			}
 
 			return productJSON, true
 		}
 	}
 
-	return nil, false
+	return
 }
 
 // GetProductsFromFullCache attempts to extract a basic products list from cached ProductsFull data.
 // Returns the products data and true if found, nil and false if not found or not cached.
-func (cm *CacheManager) GetProductsFromFullCache() (json.RawMessage, bool) {
+func (cm *CacheManager) GetProductsFromFullCache() (_ json.RawMessage, found bool) {
 	if !cm.enabled {
-		return nil, false
+		return
 	}
 
-	fullCache, found := cm.Get("/products/full")
-	if !found {
-		return nil, false
-	}
-
-	var fullResponse map[string]any
-
-	if err := json.Unmarshal(fullCache, &fullResponse); err != nil {
-		return nil, false
-	}
-
-	result, ok := fullResponse["result"].([]any)
+	fullCache, ok := cm.Get("/products/full")
 	if !ok {
-		return nil, false
+		return
 	}
 
-	var products []map[string]any //nolint:prealloc // ok
+	fullResponse := map[string]any{}
+	if err := json.Unmarshal(fullCache, &fullResponse); err != nil {
+		return
+	}
+
+	result, found := fullResponse["result"].([]any)
+	if !found {
+		return
+	}
+
+	products := make([]map[string]any, 0, len(result))
 
 	for _, p := range result {
 		productMap, ok := p.(map[string]any) //nolint:govet // ok
@@ -440,7 +441,7 @@ func (cm *CacheManager) GetProductsFromFullCache() (json.RawMessage, bool) {
 
 	productsJSON, err := json.Marshal(productsResponse)
 	if err != nil {
-		return nil, false
+		return
 	}
 
 	return productsJSON, true
@@ -450,39 +451,44 @@ func (cm *CacheManager) GetProductsFromFullCache() (json.RawMessage, bool) {
 // This is similar to GetReleaseFromProductCache but uses the full products cache instead.
 //
 //nolint:gocognit,gocyclo,cyclop,funlen // ok
-func (cm *CacheManager) GetReleaseFromFullCache(product, release string) (json.RawMessage, bool) {
+func (cm *CacheManager) GetReleaseFromFullCache(product, release string) (_ json.RawMessage, found bool) {
 	if !cm.enabled {
-		return nil, false
+		return
 	}
 
-	fullCache, found := cm.Get("/products/full")
-	if !found {
-		return nil, false
-	}
-
-	var fullResponse map[string]any
-
-	if err := json.Unmarshal(fullCache, &fullResponse); err != nil {
-		return nil, false
-	}
-
-	result, ok := fullResponse["result"].([]any)
+	fullCache, ok := cm.Get("/products/full")
 	if !ok {
-		return nil, false
+		return
+	}
+
+	fullResponse := map[string]any{}
+	if err := json.Unmarshal(fullCache, &fullResponse); err != nil {
+		return
+	}
+
+	result, found := fullResponse["result"].([]any)
+	if !found {
+		return
 	}
 
 	for _, p := range result {
-		productMap, ok := p.(map[string]any) //nolint:govet // ok
+		var (
+			productMap map[string]any
+			name       string
+			releases   []any
+		)
+
+		productMap, ok = p.(map[string]any)
 		if !ok {
 			continue
 		}
 
-		name, ok := productMap["name"].(string)
+		name, ok = productMap["name"].(string)
 		if !ok || name != product {
 			continue
 		}
 
-		releases, ok := productMap["releases"].([]any)
+		releases, ok = productMap["releases"].([]any)
 		if !ok {
 			continue
 		}
@@ -498,7 +504,6 @@ func (cm *CacheManager) GetReleaseFromFullCache(product, release string) (json.R
 				continue
 			}
 
-			// Check both original and normalized release names.
 			if releaseName == release || releaseName == normalizeVersion(release) {
 				releaseResponse := map[string]any{
 					"schema_version": fullResponse["schema_version"],
@@ -507,39 +512,35 @@ func (cm *CacheManager) GetReleaseFromFullCache(product, release string) (json.R
 
 				releaseJSON, err := json.Marshal(releaseResponse)
 				if err != nil {
-					return nil, false
+					return
 				}
 
 				return releaseJSON, true
 			}
 		}
 
-		return nil, false
+		return
 	}
 
-	return nil, false
+	return
 }
 
 // ensureCacheDir creates the cache directory if it doesn't exist.
 func (cm *CacheManager) ensureCacheDir() error {
-	return os.MkdirAll(cm.baseDir, 0o750) //nolint:mnd // it's a file permission
+	return os.MkdirAll(cm.baseDir, dirPerm)
 }
 
 // generateCacheKey creates a cache key from endpoint and parameters.
 func (cm *CacheManager) generateCacheKey(endpoint string, params ...string) string {
 	endpoint = strings.TrimPrefix(endpoint, "/")
-	endpoint = strings.ReplaceAll(endpoint, "/", "-")
-
-	if endpoint == "" {
-		endpoint = "index"
-	}
+	endpoint = cmp.Or(strings.ReplaceAll(endpoint, "/", "-"), "index")
 
 	if len(params) == 0 {
 		return endpoint + ".json"
 	}
 
 	paramStr := strings.Join(params, "|")
-	hash := fmt.Sprintf("%x", md5.Sum([]byte(paramStr))) //nolint:gosec // MD5 is fine for cache keys
+	hash := fmt.Sprintf("%x", md5.Sum([]byte(paramStr))) //nolint:gosec // fine for cache keys
 
 	return fmt.Sprintf("%s-%s.json", endpoint, hash[:8])
 }

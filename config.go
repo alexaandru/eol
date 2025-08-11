@@ -38,6 +38,7 @@ var (
 // If initial arguments are provided, it uses them, otherwise it defaults to os.Args.
 func NewConfig(opts ...string) (c *Config, err error) {
 	var args []string
+
 	if opts != nil {
 		args = opts
 	} else {
@@ -48,11 +49,7 @@ func NewConfig(opts ...string) (c *Config, err error) {
 		return
 	}
 
-	c = &Config{
-		Format:       FormatText,
-		CacheEnabled: true,
-		CacheTTL:     time.Hour,
-	}
+	c = &Config{Format: FormatText, CacheEnabled: true, CacheTTL: DefaultCacheTTL}
 
 	args, err = c.ParseGlobalFlags(args)
 	if err != nil {
@@ -71,7 +68,7 @@ func NewConfig(opts ...string) (c *Config, err error) {
 // ParseGlobalFlags parses global command-line flags from the provided arguments
 // and returns the remaining non-flag arguments.
 //
-//nolint:nakedret,gocognit,gocyclo,cyclop,funlen // ok
+//nolint:gocognit,gocyclo,cyclop,funlen // ok
 func (c *Config) ParseGlobalFlags(args []string) (rest []string, err error) {
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -152,10 +149,10 @@ func (c *Config) HasInlineTemplate() bool {
 	return c.InlineTemplate != ""
 }
 
-func validateArgs(args []string) error {
+func validateArgs(args []string) (err error) {
 	if len(args) < 1 {
 		return fmt.Errorf("insufficient arguments: %w a command", errRequires)
 	}
 
-	return nil
+	return
 }
