@@ -373,8 +373,17 @@ Common error cases:
 
 - Default: 1 hour for all endpoints except --full
 - `--full`: Always 24 hours (cannot be disabled)
-- Location: `~/.local/state/eol/` (configurable)
-- Format: JSON files with expiration metadata
+- Location: `~/.cache/eol/` (configurable with `--cache-dir`)
+- Format: `.eol_cache.json` files with expiration metadata
+
+**Cache safety:**
+
+The `cache clear` command includes multiple safety layers:
+
+- Only works if the final folder name is exactly: `.eol-cache`, `eol-cache`, or `eol`
+- Only removes `*.eol_cache.json` files (no subfolders affected)
+- Will conservatively refuse to clear folders that do not look like our own cache folder
+- Example safe paths: `~/.cache/eol`, `/var/cache/eol-cache`, `/tmp/.eol-cache`
 
 ## Template Functions
 

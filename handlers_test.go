@@ -3,6 +3,7 @@ package eol
 import (
 	"bytes"
 	"context"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -1788,7 +1789,7 @@ func createTestClient(t *testing.T, _ context.Context, responses map[string]*moc
 	t.Helper()
 
 	mockClient := newMockClient(responses)
-	cacheManager := NewCacheManager(t.TempDir(), true, time.Hour)
+	cacheManager := NewCacheManager(filepath.Join(t.TempDir(), "eol-cache"), true, time.Hour)
 	config := &Config{Command: command, Args: args, Format: FormatText}
 
 	client, err := New(

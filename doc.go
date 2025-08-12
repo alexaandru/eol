@@ -98,8 +98,18 @@
 //   - Default cache TTL: 1 hour for most endpoints
 //   - ProductsFull endpoint: 24-hour cache (cannot be disabled)
 //   - Smart cache sharing: Product details can be served from ProductsFull cache
-//   - File-based cache storage in user's local state directory
+//   - File-based cache storage in ~/.cache/eol/ (follows XDG conventions)
 //   - Configurable cache directory and TTL
+//   - Cache files use .eol_cache.json extension for clear identification
+//
+// # Cache Safety
+//
+// The cache clear operation includes multiple safety layers to prevent accidental data loss:
+//
+//   - Only works if the final folder name is exactly: .eol-cache, eol-cache, or eol
+//   - Only removes *.eol_cache.json files (no subfolders affected)
+//   - Will conservatively refuse to clear folders that do not look like our own cache folder
+//   - Example safe paths: ~/.cache/eol, /var/cache/eol-cache, /tmp/.eol-cache
 //
 // # Error Handling
 //
@@ -151,6 +161,8 @@
 //	eol -t '{{.Name}}: {{.Category}}' product ubuntu  # Custom template
 //	eol --cache-for 2h product ubuntu                  # Custom cache duration
 //	eol --disable-cache latest go                      # Disable caching
+//	eol cache clear                                    # Safely clear cache
+//	eol cache stats                                    # Show cache statistics
 //
 // # Template System
 //
@@ -195,8 +207,8 @@
 //		log.Fatal(err)
 //	}
 //
-//	// Custom cache manager
-//	cacheManager := eol.NewCacheManager("/custom/cache/dir", true, time.Hour*2)
+//	// Custom cache manager (final folder name must be exactly eol, eol-cache, or .eol-cache)
+//	cacheManager := eol.NewCacheManager("/custom/cache/eol", true, time.Hour*2)
 //	client, err := eol.New(eol.WithCacheManager(cacheManager))
 //
 // For comprehensive documentation and examples, visit:

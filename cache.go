@@ -4,10 +4,12 @@ import (
 	"cmp"
 	"crypto/md5" //nolint:gosec // fine for cache keys
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 )
@@ -41,8 +43,12 @@ type CacheManager struct {
 	fullTTL    time.Duration
 }
 
-// The TTL used for full endpoints (e.g., /products/full).
-const fullTTL = 24 * time.Hour
+const (
+	fullTTL  = 24 * time.Hour // The TTL used for full endpoints (e.g., /products/full).
+	cacheExt = ".eol_cache.json"
+)
+
+var errRefusingToClear = errors.New("refusing to clear")
 
 // NewCacheManager creates a new cache manager.
 func NewCacheManager(baseDir string, enabled bool, defaultTTL time.Duration) *CacheManager {
@@ -56,7 +62,7 @@ func NewCacheManager(baseDir string, enabled bool, defaultTTL time.Duration) *Ca
 		case runtime.GOOS == "darwin":
 			baseDir = filepath.Join(homeDir, "Library", "Caches", "eol")
 		default:
-			baseDir = filepath.Join(homeDir, ".local", "state", "eol")
+			baseDir = filepath.Join(homeDir, ".cache", "eol")
 		}
 	}
 
@@ -66,16 +72,6 @@ func NewCacheManager(baseDir string, enabled bool, defaultTTL time.Duration) *Ca
 		defaultTTL: defaultTTL,
 		fullTTL:    fullTTL,
 	}
-}
-
-// SetEnabled enables or disables caching.
-func (cm *CacheManager) SetEnabled(enabled bool) {
-	cm.enabled = enabled
-}
-
-// SetDefaultTTL sets the default cache TTL.
-func (cm *CacheManager) SetDefaultTTL(ttl time.Duration) {
-	cm.defaultTTL = ttl
 }
 
 // Get retrieves data from cache if valid.
@@ -155,9 +151,25 @@ func (cm *CacheManager) Set(endpoint string, data any, params ...string) (err er
 	return
 }
 
-// Clear removes all cache files.
-func (cm *CacheManager) Clear() error {
-	return os.RemoveAll(cm.baseDir)
+// Clear removes all cache files, safely.
+func (cm *CacheManager) Clear() (err error) {
+	allowedDirs := []string{".eol-cache", "eol-cache", "eol"}
+	if dirName := filepath.Base(cm.baseDir); !slices.Contains(allowedDirs, dirName) {
+		return fmt.Errorf("%w non-default cache folder: %q", errRefusingToClear, dirName)
+	}
+
+	matches, err := filepath.Glob(filepath.Join(cm.baseDir, "*"+cacheExt))
+	if err != nil {
+		return fmt.Errorf("failed to find cache files: %w", err)
+	}
+
+	for _, file := range matches {
+		if err = os.Remove(file); err != nil {
+			return fmt.Errorf("failed to remove cache file %s: %w", file, err)
+		}
+	}
+
+	return
 }
 
 // ClearExpired removes expired cache files.
@@ -174,7 +186,7 @@ func (cm *CacheManager) ClearExpired() (err error) {
 	now := time.Now()
 
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), cacheExt) {
 			continue
 		}
 
@@ -536,13 +548,13 @@ func (cm *CacheManager) generateCacheKey(endpoint string, params ...string) stri
 	endpoint = cmp.Or(strings.ReplaceAll(endpoint, "/", "-"), "index")
 
 	if len(params) == 0 {
-		return endpoint + ".json"
+		return endpoint + cacheExt
 	}
 
 	paramStr := strings.Join(params, "|")
 	hash := fmt.Sprintf("%x", md5.Sum([]byte(paramStr))) //nolint:gosec // fine for cache keys
 
-	return fmt.Sprintf("%s-%s.json", endpoint, hash[:8])
+	return fmt.Sprintf("%s-%s%s", endpoint, hash[:8], cacheExt)
 }
 
 // getCacheFilePath returns the full path to a cache file.

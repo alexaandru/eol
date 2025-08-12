@@ -43,7 +43,6 @@ func TestTemplateManagerGetAvailableTemplates(t *testing.T) {
 
 			if tt.overrideDir != "" { //nolint:nestif // ok
 				tempDir = t.TempDir()
-				defer os.RemoveAll(tempDir)
 
 				if tt.setupUserTemplate {
 					// Create a test template file.
@@ -934,7 +933,6 @@ func TestTemplateManagerLoadFromFile(t *testing.T) {
 				return
 			default:
 				tempDir := t.TempDir()
-				defer os.RemoveAll(tempDir)
 
 				tm, err = NewTemplateManager(tempDir, "", "", nil)
 				if err != nil {
@@ -1039,7 +1037,6 @@ func TestTemplateManagerAddUserTemplates(t *testing.T) {
 	t.Parallel()
 
 	tempDir := t.TempDir()
-	defer os.RemoveAll(tempDir)
 
 	// Create test template files.
 	templateFiles := map[string]string{

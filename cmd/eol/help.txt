@@ -19,7 +19,7 @@ Options:
   -f, --format <format>           Output format (text, json)
   -t, --template <template>       Inline template for custom output formatting
   --disable-cache                 Disable caching (ignored for --full)
-  --cache-dir <dir>               Cache directory (default: ~/.local/state/eol)
+  --cache-dir <dir>               Cache directory (default: ~/.cache/eol)
   --cache-for <duration>          Cache TTL (default: 1h, examples: 30m, 2h, 1d)
   --template-dir <dir>            Custom template directory (default: ~/.config/eol/templates)
 
@@ -49,8 +49,14 @@ Examples:
 Caching Behavior:
   Default cache: 1 hour for all endpoints except --full
   --full endpoint: Always cached for 24 hours (cannot be disabled)
-  Cache location: ~/.local/state/eol/ (configurable with --cache-dir)
-  Cache format: JSON files with expiration metadata
+  Cache location: ~/.cache/eol/ (configurable with --cache-dir)
+  Cache format: .eol_cache.json files with expiration metadata
+
+Cache Safety:
+  "cache clear" only works if the final folder name is exactly:
+    .eol-cache, eol-cache, or eol
+  Will conservatively refuse to clear folders that do not look like our own cache folder.
+  Only removes *.eol_cache.json files (no subfolders affected).
 
 Template Customization:
   eol templates                         # List available templates
