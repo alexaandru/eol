@@ -208,7 +208,7 @@
 //	}
 //
 //	// Custom cache manager (final folder name must be exactly eol, eol-cache, or .eol-cache)
-//	cacheManager := eol.NewCacheManager("/custom/cache/eol", true, time.Hour*2)
+//	cacheManager := eol.NewCacheManager("/custom/cache/eol", eol.DefaultBaseURL, true, time.Hour*2)
 //	client, err := eol.New(eol.WithCacheManager(cacheManager))
 //
 // For comprehensive documentation and examples, visit:

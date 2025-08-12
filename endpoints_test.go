@@ -24,8 +24,8 @@ func TestClientIndex(t *testing.T) {
 				"schema_version": "1.2.0",
 				"total": 2,
 				"result": [
-					{"name": "products", "uri": "https://endoflife.date/api/v1/products"},
-					{"name": "categories", "uri": "https://endoflife.date/api/v1/categories"}
+					{"name": "products", "uri": "` + DefaultBaseURL + `/products"},
+					{"name": "categories", "uri": "` + DefaultBaseURL + `/categories"}
 				]
 			}`,
 			statusCode:     200,
@@ -58,7 +58,7 @@ func TestClientIndex(t *testing.T) {
 			t.Parallel()
 
 			mockHTTPClient := newMockClient(map[string]*mockResponse{
-				"https://endoflife.date/api/v1/": {StatusCode: tt.statusCode, Body: tt.mockResponse},
+				DefaultBaseURL + "/": {Code: tt.statusCode, Body: tt.mockResponse},
 			})
 
 			client := newTestClientEndpoints(t, mockHTTPClient)
@@ -106,7 +106,7 @@ func TestClientProducts(t *testing.T) {
 						"name": "go",
 						"label": "Go",
 						"category": "lang",
-						"uri": "https://endoflife.date/api/v1/products/go",
+						"uri": "` + DefaultBaseURL + `/products/go",
 						"aliases": ["golang"],
 						"tags": ["google", "lang"]
 					}
@@ -129,7 +129,7 @@ func TestClientProducts(t *testing.T) {
 			t.Parallel()
 
 			mockHTTPClient := newMockClient(map[string]*mockResponse{
-				"https://endoflife.date/api/v1/products": {StatusCode: tt.statusCode, Body: tt.mockResponse},
+				DefaultBaseURL + "/products": {Code: tt.statusCode, Body: tt.mockResponse},
 			})
 
 			client := newTestClientEndpoints(t, mockHTTPClient)
@@ -195,7 +195,7 @@ func TestClientProductsFull(t *testing.T) {
 			t.Parallel()
 
 			mockClient := newMockClient(map[string]*mockResponse{
-				"https://endoflife.date/api/v1/products/full": {StatusCode: tt.statusCode, Body: tt.mockResponse},
+				DefaultBaseURL + "/products/full": {Code: tt.statusCode, Body: tt.mockResponse},
 			})
 
 			client := newClientWithTempCache(t, mockClient)
@@ -276,7 +276,7 @@ func TestClientProduct(t *testing.T) {
 			var mockClient *http.Client
 			if tt.product != "" {
 				mockClient = newMockClient(map[string]*mockResponse{
-					"https://endoflife.date/api/v1/products/" + tt.product: {StatusCode: tt.statusCode, Body: tt.mockResponse},
+					DefaultBaseURL + "/products/" + tt.product: {Code: tt.statusCode, Body: tt.mockResponse},
 				})
 			} else {
 				mockClient = newMockClient(map[string]*mockResponse{})
@@ -409,9 +409,9 @@ func TestClientProductRelease(t *testing.T) {
 
 			if tt.product != "" && tt.release != "" {
 				normalizedRelease := normalizeVersion(tt.release)
-				url := fmt.Sprintf("https://endoflife.date/api/v1/products/%s/releases/%s", tt.product, normalizedRelease)
+				url := fmt.Sprintf("%s/products/%s/releases/%s", DefaultBaseURL, tt.product, normalizedRelease)
 				mockClient = newMockClient(map[string]*mockResponse{
-					url: {StatusCode: tt.statusCode, Body: tt.mockResponse},
+					url: {Code: tt.statusCode, Body: tt.mockResponse},
 				})
 			} else {
 				mockClient = newMockClient(map[string]*mockResponse{})
@@ -492,7 +492,7 @@ func TestClientProductLatestRelease(t *testing.T) {
 			var mockClient *http.Client
 			if tt.product != "" {
 				mockClient = newMockClient(map[string]*mockResponse{
-					fmt.Sprintf("https://endoflife.date/api/v1/products/%s/releases/latest", tt.product): {StatusCode: tt.statusCode, Body: tt.mockResponse},
+					fmt.Sprintf("%s/products/%s/releases/latest", DefaultBaseURL, tt.product): {Code: tt.statusCode, Body: tt.mockResponse},
 				})
 			} else {
 				mockClient = newMockClient(map[string]*mockResponse{})
@@ -534,8 +534,8 @@ func TestClientCategories(t *testing.T) {
 				"schema_version": "1.2.0",
 				"total": 2,
 				"result": [
-					{"name": "lang", "uri": "https://endoflife.date/api/v1/categories/lang"},
-					{"name": "os", "uri": "https://endoflife.date/api/v1/categories/os"}
+					{"name": "lang", "uri": "` + DefaultBaseURL + `/categories/lang"},
+					{"name": "os", "uri": "` + DefaultBaseURL + `/categories/os"}
 				]
 			}`,
 			statusCode:    200,
@@ -555,7 +555,7 @@ func TestClientCategories(t *testing.T) {
 			t.Parallel()
 
 			mockHTTPClient := newMockClient(map[string]*mockResponse{
-				"https://endoflife.date/api/v1/categories": {StatusCode: tt.statusCode, Body: tt.mockResponse},
+				DefaultBaseURL + "/categories": {Code: tt.statusCode, Body: tt.mockResponse},
 			})
 
 			client := newTestClientEndpoints(t, mockHTTPClient)
@@ -599,7 +599,7 @@ func TestClientProductsByCategory(t *testing.T) {
 						"name": "go",
 						"label": "Go",
 						"category": "lang",
-						"uri": "https://endoflife.date/api/v1/products/go",
+						"uri": "` + DefaultBaseURL + `/products/go",
 						"aliases": ["golang"],
 						"tags": ["google", "lang"]
 					}
@@ -629,7 +629,7 @@ func TestClientProductsByCategory(t *testing.T) {
 			var mockClient *http.Client
 			if tt.category != "" {
 				mockClient = newMockClient(map[string]*mockResponse{
-					"https://endoflife.date/api/v1/categories/" + tt.category: {StatusCode: tt.statusCode, Body: tt.mockResponse},
+					DefaultBaseURL + "/categories/" + tt.category: {Code: tt.statusCode, Body: tt.mockResponse},
 				})
 			} else {
 				mockClient = newMockClient(map[string]*mockResponse{})
@@ -667,8 +667,8 @@ func TestClientTags(t *testing.T) {
 				"schema_version": "1.2.0",
 				"total": 2,
 				"result": [
-					{"name": "google", "uri": "https://endoflife.date/api/v1/tags/google"},
-					{"name": "lang", "uri": "https://endoflife.date/api/v1/tags/lang"}
+					{"name": "google", "uri": "` + DefaultBaseURL + `/tags/google"},
+					{"name": "lang", "uri": "` + DefaultBaseURL + `/tags/lang"}
 				]
 			}`,
 			statusCode:    200,
@@ -688,7 +688,7 @@ func TestClientTags(t *testing.T) {
 			t.Parallel()
 
 			mockHTTPClient := newMockClient(map[string]*mockResponse{
-				"https://endoflife.date/api/v1/tags": {StatusCode: tt.statusCode, Body: tt.mockResponse},
+				DefaultBaseURL + "/tags": {Code: tt.statusCode, Body: tt.mockResponse},
 			})
 
 			client := newTestClientEndpoints(t, mockHTTPClient)
@@ -732,7 +732,7 @@ func TestClientProductsByTag(t *testing.T) {
 						"name": "go",
 						"label": "Go",
 						"category": "lang",
-						"uri": "https://endoflife.date/api/v1/products/go",
+						"uri": "` + DefaultBaseURL + `/products/go",
 						"aliases": ["golang"],
 						"tags": ["google", "lang"]
 					}
@@ -762,7 +762,7 @@ func TestClientProductsByTag(t *testing.T) {
 			var mockClient *http.Client
 			if tt.tag != "" {
 				mockClient = newMockClient(map[string]*mockResponse{
-					"https://endoflife.date/api/v1/tags/" + tt.tag: {StatusCode: tt.statusCode, Body: tt.mockResponse},
+					DefaultBaseURL + "/tags/" + tt.tag: {Code: tt.statusCode, Body: tt.mockResponse},
 				})
 			} else {
 				mockClient = newMockClient(map[string]*mockResponse{})
@@ -800,8 +800,8 @@ func TestClientIdentifierTypes(t *testing.T) {
 				"schema_version": "1.2.0",
 				"total": 2,
 				"result": [
-					{"name": "cpe", "uri": "https://endoflife.date/api/v1/identifiers/cpe/"},
-					{"name": "purl", "uri": "https://endoflife.date/api/v1/identifiers/purl/"}
+					{"name": "cpe", "uri": "` + DefaultBaseURL + `/identifiers/cpe/"},
+					{"name": "purl", "uri": "` + DefaultBaseURL + `/identifiers/purl/"}
 				]
 			}`,
 			statusCode:    200,
@@ -821,7 +821,7 @@ func TestClientIdentifierTypes(t *testing.T) {
 			t.Parallel()
 
 			mockHTTPClient := newMockClient(map[string]*mockResponse{
-				"https://endoflife.date/api/v1/identifiers": {StatusCode: tt.statusCode, Body: tt.mockResponse},
+				DefaultBaseURL + "/identifiers": {Code: tt.statusCode, Body: tt.mockResponse},
 			})
 
 			client := newTestClientEndpoints(t, mockHTTPClient)
@@ -865,7 +865,7 @@ func TestClientIdentifiersByType(t *testing.T) {
 						"identifier": "cpe:2.3:a:golang:go:*:*:*:*:*:*:*:*",
 						"product": {
 							"name": "go",
-							"uri": "https://endoflife.date/api/v1/products/go"
+							"uri": "` + DefaultBaseURL + `/products/go"
 						}
 					}
 				]
@@ -894,7 +894,7 @@ func TestClientIdentifiersByType(t *testing.T) {
 			var mockClient *http.Client
 			if tt.identifierType != "" {
 				mockClient = newMockClient(map[string]*mockResponse{
-					"https://endoflife.date/api/v1/identifiers/" + tt.identifierType: {StatusCode: tt.statusCode, Body: tt.mockResponse},
+					DefaultBaseURL + "/identifiers/" + tt.identifierType: {Code: tt.statusCode, Body: tt.mockResponse},
 				})
 			} else {
 				mockClient = newMockClient(map[string]*mockResponse{})
@@ -955,7 +955,7 @@ func TestClientProductReleaseSmartCaching(t *testing.T) {
 	// Create mock client with ONLY the product endpoint - no release endpoint.
 	// This proves that the release call uses cached data instead of making API call.
 	mockClient := newMockClient(map[string]*mockResponse{
-		"https://endoflife.date/api/v1/products/go": {StatusCode: http.StatusOK, Body: productResponse},
+		DefaultBaseURL + "/products/go": {Code: http.StatusOK, Body: productResponse},
 		// Intentionally NOT including the release endpoint to verify smart caching.
 	})
 
@@ -1056,7 +1056,7 @@ func TestClientHigherLevelSmartCaching(t *testing.T) {
 	// Create mock client with ONLY the ProductsFull endpoint.
 	// This proves that all other calls use cached data.
 	mockClient := newMockClient(map[string]*mockResponse{
-		"https://endoflife.date/api/v1/products/full": {StatusCode: http.StatusOK, Body: productsFullResponse},
+		DefaultBaseURL + "/products/full": {Code: http.StatusOK, Body: productsFullResponse},
 	})
 
 	client := newClientWithTempCache(t, mockClient)
@@ -1144,7 +1144,7 @@ func TestClientHigherLevelSmartCaching(t *testing.T) {
 func newTestClientEndpoints(t *testing.T, httpClient *http.Client) *Client {
 	t.Helper()
 
-	cacheManager := NewCacheManager(t.TempDir(), true, time.Hour)
+	cacheManager := NewCacheManager(t.TempDir(), DefaultBaseURL, true, time.Hour)
 	config := &Config{
 		Format: FormatText,
 	}

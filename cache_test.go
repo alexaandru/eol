@@ -98,7 +98,7 @@ func TestNewCacheManager(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			cm := NewCacheManager(tt.baseDir, tt.enabled, tt.defaultTTL)
+			cm := NewCacheManager(tt.baseDir, DefaultBaseURL, tt.enabled, tt.defaultTTL)
 
 			if cm == nil {
 				t.Fatal("NewCacheManager returned nil")
@@ -118,7 +118,7 @@ func TestNewCacheManager(t *testing.T) {
 func TestCacheManagerGenerateCacheKey(t *testing.T) {
 	t.Parallel()
 
-	cm := NewCacheManager("/tmp/test", true, time.Hour)
+	cm := NewCacheManager("/tmp/test", DefaultBaseURL, true, time.Hour)
 
 	//nolint:govet // ok
 	tests := []struct {
@@ -180,7 +180,7 @@ func TestCacheManagerGenerateCacheKey(t *testing.T) {
 func TestCacheManagerIsFullEndpoint(t *testing.T) {
 	t.Parallel()
 
-	cm := NewCacheManager("/tmp/test", true, time.Hour)
+	cm := NewCacheManager("/tmp/test", DefaultBaseURL, true, time.Hour)
 
 	tests := []struct {
 		name     string
@@ -229,7 +229,7 @@ func TestCacheManagerIsFullEndpoint(t *testing.T) {
 func TestCacheManagerMustUseCache(t *testing.T) {
 	t.Parallel()
 
-	cm := NewCacheManager("/tmp/test", true, time.Hour)
+	cm := NewCacheManager("/tmp/test", DefaultBaseURL, true, time.Hour)
 
 	tests := []struct {
 		name     string
@@ -328,7 +328,7 @@ func TestCacheManagerSetAndGet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cm := NewCacheManager(t.TempDir(), tt.enabled, tt.ttl)
+			cm := NewCacheManager(t.TempDir(), DefaultBaseURL, tt.enabled, tt.ttl)
 
 			if tt.testData != nil {
 				err := cm.Set(tt.endpoint, tt.testData)
@@ -430,7 +430,7 @@ func TestCacheManagerClear(t *testing.T) {
 				baseDir = filepath.Join(t.TempDir(), tt.baseDir)
 			}
 
-			cm := NewCacheManager(baseDir, true, time.Hour)
+			cm := NewCacheManager(baseDir, DefaultBaseURL, true, time.Hour)
 
 			if tt.setupData {
 				testData := map[string]any{"test": "data"}
@@ -525,7 +525,7 @@ func TestCacheManagerClearExpired(t *testing.T) {
 			setupFunc: func(t *testing.T, cm *CacheManager) error {
 				t.Helper()
 
-				negativeTTLCM := NewCacheManager(cm.baseDir, true, -time.Hour)
+				negativeTTLCM := NewCacheManager(cm.baseDir, DefaultBaseURL, true, -time.Hour)
 
 				testData := map[string]any{"test": "data"}
 				if err := negativeTTLCM.Set("test1", testData); err != nil {
@@ -540,7 +540,7 @@ func TestCacheManagerClearExpired(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tempDir := filepath.Join(t.TempDir(), "eol-cache")
-			cm := NewCacheManager(tempDir, tt.enabled, time.Hour)
+			cm := NewCacheManager(tempDir, DefaultBaseURL, tt.enabled, time.Hour)
 
 			if err := tt.setupFunc(t, cm); err != nil {
 				t.Fatalf("Setup failed: %v", err)
@@ -682,7 +682,7 @@ func TestCacheManagerGetStats(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tempDir := t.TempDir()
-			cm := NewCacheManager(tempDir, tt.enabled, time.Hour)
+			cm := NewCacheManager(tempDir, DefaultBaseURL, tt.enabled, time.Hour)
 
 			tt.setupFunc(t, cm)
 
@@ -700,8 +700,54 @@ func TestCacheManagerGetStats(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest,tparallel // t.TempDir
-func TestCacheManagerGetReleaseFromProductCache(t *testing.T) {
+//nolint:paralleltest // t.TempDir
+func TestCacheManagerSmartGet(t *testing.T) {
+	fullProductsData := map[string]any{
+		"schema_version": "1.2.0",
+		"last_modified":  "2025-01-11T00:00:00Z",
+		"result": []any{
+			map[string]any{
+				"name":     "go",
+				"label":    "Go",
+				"category": "lang",
+				"tags":     []any{"language", "programming"},
+				"releases": []any{
+					map[string]any{
+						"name":         "1.24",
+						"label":        "1.24",
+						"releaseDate":  "2025-02-11",
+						"isLts":        false,
+						"isMaintained": true,
+						"isEol":        false,
+					},
+					map[string]any{
+						"name":         "1.23",
+						"label":        "1.23",
+						"releaseDate":  "2024-08-13",
+						"isLts":        false,
+						"isMaintained": true,
+						"isEol":        false,
+					},
+				},
+			},
+			map[string]any{
+				"name":     "python",
+				"label":    "Python",
+				"category": "lang",
+				"tags":     []any{"language", "scripting"},
+				"releases": []any{
+					map[string]any{
+						"name":         "3.12",
+						"label":        "3.12",
+						"releaseDate":  "2023-10-02",
+						"isLts":        false,
+						"isMaintained": true,
+						"isEol":        false,
+					},
+				},
+			},
+		},
+	}
 	productData := map[string]any{
 		"schema_version": "1.2.0",
 		"last_modified":  "2025-01-11T00:00:00Z",
@@ -717,299 +763,265 @@ func TestCacheManagerGetReleaseFromProductCache(t *testing.T) {
 					"isLts":        false,
 					"isMaintained": true,
 					"isEol":        false,
-					"latest": map[string]any{
-						"name": "1.24.0",
-						"date": "2025-02-11",
-					},
-				},
-				map[string]any{
-					"name":         "1.23",
-					"label":        "1.23",
-					"releaseDate":  "2024-08-13",
-					"isLts":        false,
-					"isMaintained": true,
-					"isEol":        false,
-					"latest": map[string]any{
-						"name": "1.23.4",
-						"date": "2024-12-03",
-					},
 				},
 			},
 		},
 	}
-
-	//nolint:govet // ok
-	tests := []struct {
+	tests := []struct { //nolint:govet // ok
 		name            string
-		enabled         bool
-		product         string
-		release         string
-		setupCache      bool
-		expectedFound   bool
-		expectedName    string
-		expectedVersion string
+		endpoint        string
+		params          []string
+		setupFullCache  bool
+		setupProdCache  bool
+		setupExactCache bool
+		expectFound     bool
+		expectExtracted bool
+		description     string
 	}{
 		{
-			name:            "existing release",
-			enabled:         true,
-			product:         "go",
-			release:         "1.24",
-			setupCache:      true,
-			expectedFound:   true,
-			expectedName:    "1.24",
-			expectedVersion: "1.2.0",
+			name:            "products from exact cache",
+			endpoint:        "/products",
+			setupExactCache: true,
+			expectFound:     true,
+			expectExtracted: false,
+			description:     "Should find exact /products cache",
 		},
 		{
-			name:            "another existing release",
-			enabled:         true,
-			product:         "go",
-			release:         "1.23",
-			setupCache:      true,
-			expectedFound:   true,
-			expectedName:    "1.23",
-			expectedVersion: "1.2.0",
+			name:            "products from full cache",
+			endpoint:        "/products",
+			setupFullCache:  true,
+			expectFound:     true,
+			expectExtracted: true,
+			description:     "Should extract products list from /products/full cache",
 		},
 		{
-			name:          "non-existent release",
-			enabled:       true,
-			product:       "go",
-			release:       "1.22",
-			setupCache:    true,
-			expectedFound: false,
+			name:            "product from exact cache",
+			endpoint:        "/products/go",
+			params:          []string{"go"},
+			setupExactCache: true,
+			expectFound:     true,
+			expectExtracted: false,
+			description:     "Should find exact /products/go cache",
 		},
 		{
-			name:          "non-existent product",
-			enabled:       true,
-			product:       "nonexistent",
-			release:       "1.0",
-			setupCache:    true,
-			expectedFound: false,
+			name:            "product from full cache",
+			endpoint:        "/products/go",
+			params:          []string{"go"},
+			setupFullCache:  true,
+			expectFound:     true,
+			expectExtracted: true,
+			description:     "Should extract product from /products/full cache",
 		},
 		{
-			name:            "version normalization",
-			enabled:         true,
-			product:         "go",
-			release:         "1.23.4",
-			setupCache:      true,
-			expectedFound:   true,
-			expectedName:    "1.23",
-			expectedVersion: "1.2.0",
+			name:            "release from exact cache",
+			endpoint:        "/products/go/releases/1.24",
+			params:          []string{"go", "1.24"},
+			setupExactCache: true,
+			expectFound:     true,
+			expectExtracted: false,
+			description:     "Should find exact release cache",
 		},
 		{
-			name:          "cache disabled",
-			enabled:       false,
-			product:       "go",
-			release:       "1.24",
-			setupCache:    true,
-			expectedFound: false,
+			name:            "release from product cache",
+			endpoint:        "/products/go/releases/1.24",
+			params:          []string{"go", "1.24"},
+			setupProdCache:  true,
+			expectFound:     true,
+			expectExtracted: true,
+			description:     "Should extract release from product cache",
 		},
 		{
-			name:          "no cache data",
-			enabled:       true,
-			product:       "go",
-			release:       "1.24",
-			setupCache:    false,
-			expectedFound: false,
+			name:            "release from full cache",
+			endpoint:        "/products/go/releases/1.24",
+			params:          []string{"go", "1.24"},
+			setupFullCache:  true,
+			expectFound:     true,
+			expectExtracted: true,
+			description:     "Should extract release from full cache",
+		},
+		{
+			name:            "categories from full cache",
+			endpoint:        "/categories",
+			setupFullCache:  true,
+			expectFound:     true,
+			expectExtracted: true,
+			description:     "Should extract categories from full cache",
+		},
+		{
+			name:            "products by category from full cache",
+			endpoint:        "/categories/lang",
+			params:          []string{"category", "lang"},
+			setupFullCache:  true,
+			expectFound:     true,
+			expectExtracted: true,
+			description:     "Should extract products by category from full cache",
+		},
+		{
+			name:            "tags from full cache",
+			endpoint:        "/tags",
+			setupFullCache:  true,
+			expectFound:     true,
+			expectExtracted: true,
+			description:     "Should extract tags from full cache",
+		},
+		{
+			name:            "products by tag from full cache",
+			endpoint:        "/tags/language",
+			params:          []string{"tag", "language"},
+			setupFullCache:  true,
+			expectFound:     true,
+			expectExtracted: true,
+			description:     "Should extract products by tag from full cache",
+		},
+		{
+			name:        "no cache available",
+			endpoint:    "/products",
+			expectFound: false,
+			description: "Should return cache miss when no cache available",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			cm := NewCacheManager(t.TempDir(), DefaultBaseURL, true, time.Hour)
 
-			cm := NewCacheManager(t.TempDir(), tt.enabled, time.Hour)
-
-			if tt.setupCache {
-				if err := cm.Set("/products/go", productData, "go"); err != nil {
-					t.Fatalf("Failed to cache product data: %v", err)
+			if tt.setupFullCache {
+				if err := cm.Set("/products/full", fullProductsData); err != nil {
+					t.Fatalf("Failed to setup full cache: %v", err)
 				}
 			}
 
-			releaseData, found := cm.GetReleaseFromProductCache(tt.product, tt.release)
+			if tt.setupProdCache {
+				if err := cm.Set("/products/go", productData, "go"); err != nil {
+					t.Fatalf("Failed to setup product cache: %v", err)
+				}
+			}
 
-			if found != tt.expectedFound {
-				t.Errorf("Expected found=%v, got found=%v", tt.expectedFound, found)
+			if tt.setupExactCache {
+				if err := cm.Set(tt.endpoint, map[string]any{"exact": "cache"}, tt.params...); err != nil {
+					t.Fatalf("Failed to setup exact cache: %v", err)
+				}
+			}
+
+			data, found := cm.Get(tt.endpoint, tt.params...)
+			if found != tt.expectFound {
+				t.Errorf("%s: Expected found=%v, got found=%v", tt.description, tt.expectFound, found)
 				return
 			}
 
-			if !tt.expectedFound {
-				return // Test passed - we expected not to find it.
-			}
-
-			releaseResponse := map[string]any{}
-			if err := json.Unmarshal(releaseData, &releaseResponse); err != nil {
-				t.Fatalf("Failed to unmarshal release response: %v", err)
-			}
-
-			if schema, ok := releaseResponse["schema_version"].(string); !ok || schema != tt.expectedVersion {
-				t.Errorf("Expected schema_version=%s, got %v", tt.expectedVersion, releaseResponse["schema_version"])
-			}
-
-			result, ok := releaseResponse["result"].(map[string]any)
-			if !ok {
-				t.Fatalf("Expected result to be a map, got %T", releaseResponse["result"])
-			}
-
-			if name, ok2 := result["name"].(string); !ok2 || name != tt.expectedName {
-				t.Errorf("Expected release name=%s, got %v", tt.expectedName, result["name"])
-			}
-		})
-	}
-}
-
-//nolint:paralleltest,tparallel // t.TempDir
-func TestCacheManagerGetProductFromFullCache(t *testing.T) {
-	//nolint:govet // ok
-	tests := []struct {
-		name          string
-		enabled       bool
-		product       string
-		expectedFound bool
-	}{
-		{
-			name:          "no cached data enabled",
-			enabled:       true,
-			product:       "go",
-			expectedFound: false,
-		},
-		{
-			name:          "no cached data disabled",
-			enabled:       false,
-			product:       "go",
-			expectedFound: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			cm := NewCacheManager(t.TempDir(), tt.enabled, time.Hour)
-
-			_, found := cm.GetProductFromFullCache(tt.product)
-			if found != tt.expectedFound {
-				t.Errorf("Expected found=%v, got found=%v", tt.expectedFound, found)
-			}
-		})
-	}
-}
-
-//nolint:paralleltest,tparallel // t.TempDir
-func TestCacheManagerGetReleaseFromFullCache(t *testing.T) {
-	//nolint:govet // ok
-	tests := []struct {
-		name          string
-		enabled       bool
-		product       string
-		release       string
-		expectedFound bool
-	}{
-		{
-			name:          "no cached data enabled",
-			enabled:       true,
-			product:       "go",
-			release:       "1.24",
-			expectedFound: false,
-		},
-		{
-			name:          "no cached data disabled",
-			enabled:       false,
-			product:       "go",
-			release:       "1.24",
-			expectedFound: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			cm := NewCacheManager(t.TempDir(), tt.enabled, time.Hour)
-
-			_, found := cm.GetReleaseFromFullCache(tt.product, tt.release)
-			if found != tt.expectedFound {
-				t.Errorf("Expected found=%v, got found=%v", tt.expectedFound, found)
-			}
-		})
-	}
-}
-
-//nolint:paralleltest,tparallel // t.TempDir
-func TestCacheManagerGetProductsFromFullCache(t *testing.T) {
-	tests := []struct {
-		name          string
-		enabled       bool
-		expectedFound bool
-	}{
-		{
-			name:          "no cached data enabled",
-			enabled:       true,
-			expectedFound: false,
-		},
-		{
-			name:          "no cached data disabled",
-			enabled:       false,
-			expectedFound: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			cm := NewCacheManager(t.TempDir(), tt.enabled, time.Hour)
-
-			_, found := cm.GetProductsFromFullCache()
-			if found != tt.expectedFound {
-				t.Errorf("Expected found=%v, got found=%v", tt.expectedFound, found)
-			}
-		})
-	}
-}
-
-//nolint:paralleltest,tparallel // t.TempDir
-func TestCacheManagerInvalidJSON(t *testing.T) {
-	//nolint:govet // ok
-	tests := []struct {
-		name     string
-		testFunc func(*testing.T, *CacheManager)
-	}{
-		{
-			name: "GetProductFromFullCache with invalid JSON",
-			testFunc: func(t *testing.T, cm *CacheManager) {
-				t.Helper()
-
-				_, found := cm.GetProductFromFullCache("test")
-				if found {
-					t.Error("Expected not to find product with invalid JSON")
+			if found { //nolint:nestif // ok
+				result := map[string]any{}
+				if err := json.Unmarshal(data, &result); err != nil {
+					t.Errorf("%s: Failed to unmarshal result: %v", tt.description, err)
 				}
+
+				if tt.expectExtracted {
+					if _, hasSchema := result["schema_version"]; !hasSchema {
+						t.Errorf("%s: Expected extracted data to have schema_version", tt.description)
+					}
+
+					if _, hasResult := result["result"]; !hasResult {
+						t.Errorf("%s: Expected extracted data to have result", tt.description)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestCacheManagerDynamicBaseURL(t *testing.T) {
+	t.Parallel()
+
+	customBaseURL := "https://custom.api.example.com/v2"
+	cm := NewCacheManager(t.TempDir(), customBaseURL, true, time.Hour)
+	fullProductsData := map[string]any{
+		"schema_version": "1.2.0",
+		"total":          2,
+		"result": []any{
+			map[string]any{
+				"name":     "go",
+				"label":    "Go",
+				"category": "lang",
+				"aliases":  []any{"golang"},
+				"tags":     []any{"google", "programming"},
 			},
-		},
-		{
-			name: "GetReleaseFromFullCache with invalid JSON",
-			testFunc: func(t *testing.T, cm *CacheManager) {
-				t.Helper()
-
-				_, found := cm.GetReleaseFromFullCache("test", "1.0")
-				if found {
-					t.Error("Expected not to find release with invalid JSON")
-				}
+			map[string]any{
+				"name":     "ubuntu",
+				"label":    "Ubuntu",
+				"category": "os",
+				"tags":     []any{"canonical", "linux"},
 			},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+	err := cm.Set("/products/full", fullProductsData)
+	if err != nil {
+		t.Fatalf("Failed to set full products cache: %v", err)
+	}
 
-			cm := NewCacheManager(t.TempDir(), true, time.Hour)
+	productsData, found := cm.Get("/products")
+	if !found {
+		t.Fatal("Expected to find products data extracted from full cache")
+	}
 
-			invalidJSON := []byte("{invalid json")
-			if err := cm.Set("/test", invalidJSON, "test"); err != nil {
-				t.Fatalf("Failed to set invalid JSON: %v", err)
-			}
+	productsResponse := map[string]any{}
+	if err = json.Unmarshal(productsData, &productsResponse); err != nil {
+		t.Fatalf("Failed to unmarshal products response: %v", err)
+	}
 
-			tt.testFunc(t, cm)
-		})
+	result, ok := productsResponse["result"].([]any)
+	if !ok {
+		t.Fatal("Expected result to be array")
+	}
+
+	for _, item := range result {
+		product, ok2 := item.(map[string]any)
+		if !ok2 {
+			continue
+		}
+
+		uri, ok2 := product["uri"].(string)
+		if !ok2 {
+			t.Errorf("Expected uri field in product %v", product["name"])
+			continue
+		}
+
+		expectedPrefix := customBaseURL + "/products/"
+		if !strings.HasPrefix(uri, expectedPrefix) {
+			t.Errorf("Expected URI to start with %s, got %s", expectedPrefix, uri)
+		}
+	}
+
+	categoriesData, found := cm.Get("/categories")
+	if !found {
+		t.Fatal("Expected to find categories data extracted from full cache")
+	}
+
+	catResp := map[string]any{}
+	if err = json.Unmarshal(categoriesData, &catResp); err != nil {
+		t.Fatalf("Failed to unmarshal categories response: %v", err)
+	}
+
+	categoryResult, ok := catResp["result"].([]any)
+	if !ok {
+		t.Fatal("Expected categories result to be array")
+	}
+
+	for _, item := range categoryResult {
+		category, ok2 := item.(map[string]any)
+		if !ok2 {
+			continue
+		}
+
+		uri, ok2 := category["uri"].(string)
+		if !ok2 {
+			t.Errorf("Expected uri field in category %v", category["name"])
+			continue
+		}
+
+		expectedPrefix := customBaseURL + "/categories/"
+		if !strings.HasPrefix(uri, expectedPrefix) {
+			t.Errorf("Expected category URI to start with %s, got %s", expectedPrefix, uri)
+		}
 	}
 }

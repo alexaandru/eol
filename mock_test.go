@@ -10,8 +10,8 @@ import (
 )
 
 type mockResponse struct {
-	Body       string
-	StatusCode int
+	Body string
+	Code int
 }
 
 type mockTransport struct {
@@ -34,7 +34,7 @@ func (m *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	if resp, ok := m.responses[req.URL.String()]; ok {
-		return newMockResponse(resp.StatusCode, resp.Body), nil
+		return newMockResponse(resp.Code, resp.Body), nil
 	}
 
 	// Default 404 response.
@@ -46,7 +46,7 @@ func newMockResponse(statusCode int, body string) *http.Response {
 		StatusCode: statusCode,
 		Status:     fmt.Sprintf("%d %s", statusCode, http.StatusText(statusCode)),
 		Body:       io.NopCloser(strings.NewReader(body)),
-		Header:     make(http.Header),
+		Header:     http.Header{},
 	}
 }
 
@@ -60,7 +60,7 @@ func newClientWithTempCache(t *testing.T, httpClient *http.Client) (c *Client) {
 
 	c, err = New(
 		WithHTTPClient(httpClient),
-		WithCacheManager(NewCacheManager(t.TempDir(), true, time.Hour)),
+		WithCacheManager(NewCacheManager(t.TempDir(), DefaultBaseURL, true, time.Hour)),
 		WithConfig(config),
 	)
 	if err != nil {

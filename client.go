@@ -72,7 +72,7 @@ func New(opts ...Option) (c *Client, err error) {
 	}
 
 	if c.cacheManager == nil {
-		c.cacheManager = NewCacheManager(c.config.CacheDir, c.config.CacheEnabled,
+		c.cacheManager = NewCacheManager(c.config.CacheDir, c.baseURL.String(), c.config.CacheEnabled,
 			cmp.Or(c.config.CacheTTL, DefaultCacheTTL))
 	}
 

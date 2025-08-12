@@ -14,6 +14,21 @@ import (
 	"time"
 )
 
+// CacheManager handles caching of API responses.
+type CacheManager struct {
+	baseDir    string
+	baseURL    string
+	enabled    bool
+	defaultTTL time.Duration
+	fullTTL    time.Duration
+}
+
+// CacheStrategy represents a cache lookup strategy with extraction logic.
+type CacheStrategy struct { //nolint:govet // ok
+	CacheKey    string
+	ExtractFunc func(json.RawMessage, ...string) (json.RawMessage, bool)
+}
+
 // CacheEntry represents a cached API response.
 type CacheEntry struct {
 	Timestamp  time.Time       `json:"timestamp"`
@@ -35,14 +50,6 @@ type CacheStats struct {
 	Enabled      bool   `json:"enabled"`
 }
 
-// CacheManager handles caching of API responses.
-type CacheManager struct {
-	baseDir    string
-	enabled    bool
-	defaultTTL time.Duration
-	fullTTL    time.Duration
-}
-
 const (
 	fullTTL  = 24 * time.Hour // The TTL used for full endpoints (e.g., /products/full).
 	cacheExt = ".eol_cache.json"
@@ -51,7 +58,7 @@ const (
 var errRefusingToClear = errors.New("refusing to clear")
 
 // NewCacheManager creates a new cache manager.
-func NewCacheManager(baseDir string, enabled bool, defaultTTL time.Duration) *CacheManager {
+func NewCacheManager(baseDir, baseURL string, enabled bool, defaultTTL time.Duration) *CacheManager {
 	if baseDir == "" {
 		homeDir, err := os.UserHomeDir()
 		switch {
@@ -68,42 +75,23 @@ func NewCacheManager(baseDir string, enabled bool, defaultTTL time.Duration) *Ca
 
 	return &CacheManager{
 		baseDir:    baseDir,
+		baseURL:    baseURL,
 		enabled:    enabled,
 		defaultTTL: defaultTTL,
 		fullTTL:    fullTTL,
 	}
 }
 
-// Get retrieves data from cache if valid.
+// Get retrieves data from cache using smart strategy hierarchy.
 func (cm *CacheManager) Get(endpoint string, params ...string) (_ json.RawMessage, found bool) {
 	// For --full endpoints, always check cache regardless of enabled flag.
 	if !cm.enabled && !cm.isFullEndpoint(endpoint) {
 		return
 	}
 
-	key := cm.generateCacheKey(endpoint, params...)
-	filePath := cm.getCacheFilePath(key)
+	strategies := cm.buildCacheStrategies(endpoint, params...)
 
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return
-	}
-
-	data, err := os.ReadFile(filePath) //nolint:gosec // Reading cache file is safe
-	if err != nil {
-		return
-	}
-
-	entry := CacheEntry{}
-	if err = json.Unmarshal(data, &entry); err != nil {
-		return
-	}
-
-	if time.Now().After(entry.ExpiresAt) {
-		os.Remove(filePath) //nolint:errcheck,gosec // TODO
-		return
-	}
-
-	return entry.Data, true
+	return cm.tryStrategies(strategies, 0, params...)
 }
 
 // Set stores data in cache.
@@ -274,24 +262,224 @@ func (cm *CacheManager) MustUseCache(endpoint string) bool {
 	return cm.isFullEndpoint(endpoint)
 }
 
-// GetReleaseFromProductCache attempts to find a specific release in cached product data.
-// Returns the release data and true if found, nil and false if not found or not cached.
-//
-//nolint:gocognit // ok
-func (cm *CacheManager) GetReleaseFromProductCache(product, release string) (_ json.RawMessage, found bool) {
-	if !cm.enabled {
+// getRawCacheByKey retrieves raw cache data with TTL validation using a generated cache key.
+func (cm *CacheManager) getRawCacheByKey(cacheKey string) (_ json.RawMessage, found bool) {
+	filePath := cm.getCacheFilePath(cacheKey)
+
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return
 	}
 
-	productEndpoint := "/products/" + product
+	data, err := os.ReadFile(filePath) //nolint:gosec // Reading cache file is safe
+	if err != nil {
+		return
+	}
 
-	productCache, ok := cm.Get(productEndpoint, product)
+	entry := CacheEntry{}
+	if err = json.Unmarshal(data, &entry); err != nil {
+		return
+	}
+
+	if time.Now().After(entry.ExpiresAt) {
+		os.Remove(filePath) //nolint:errcheck,gosec // TODO
+		return
+	}
+
+	return entry.Data, true
+}
+
+// buildCacheStrategies creates the ordered list of cache strategies for an endpoint.
+func (cm *CacheManager) buildCacheStrategies(endpoint string, params ...string) []CacheStrategy {
+	switch {
+	case endpoint == "/products":
+		return []CacheStrategy{
+			{cm.generateCacheKey("/products"), cm.extractExact},
+			{cm.generateCacheKey("/products/full"), cm.extractProductsFromFull},
+		}
+	case strings.HasPrefix(endpoint, "/products/") && len(params) >= 1 && !strings.Contains(endpoint, "/releases/"):
+		p := params[0]
+
+		return []CacheStrategy{
+			{cm.generateCacheKey("/products/"+p, p), cm.extractExact},
+			{cm.generateCacheKey("/products/full"), func(data json.RawMessage, _ ...string) (json.RawMessage, bool) {
+				return cm.extractProductFromFull(data, p)
+			}},
+		}
+	case strings.HasPrefix(endpoint, "/products/") && strings.Contains(endpoint, "/releases/") && len(params) >= 2:
+		p, rel := params[0], params[1]
+
+		return []CacheStrategy{
+			{cm.generateCacheKey("/products/"+p+"/releases/"+rel, p, rel), cm.extractExact},
+			{
+				cm.generateCacheKey("/products/"+p, p),
+				func(data json.RawMessage, _ ...string) (json.RawMessage, bool) {
+					return cm.extractReleaseFromProduct(data, rel)
+				},
+			},
+			{
+				cm.generateCacheKey("/products/full"),
+				func(data json.RawMessage, _ ...string) (json.RawMessage, bool) {
+					return cm.extractReleaseFromFull(data, p, rel)
+				},
+			},
+		}
+	case endpoint == "/categories":
+		return []CacheStrategy{
+			{cm.generateCacheKey("/categories"), cm.extractExact},
+			{cm.generateCacheKey("/products/full"), cm.extractCategoriesFromFull},
+		}
+	case strings.HasPrefix(endpoint, "/categories/") && len(params) >= 2:
+		cat := params[1] // If params[0] is "category", params[1] is the actual category.
+
+		return []CacheStrategy{
+			{cm.generateCacheKey("/categories/"+cat, "category", cat), cm.extractExact},
+			{cm.generateCacheKey("/products/full"), func(data json.RawMessage, _ ...string) (json.RawMessage, bool) {
+				return cm.extractProductsByCategoryFromFull(data, cat)
+			}},
+		}
+	case endpoint == "/tags":
+		return []CacheStrategy{
+			{cm.generateCacheKey("/tags"), cm.extractExact},
+			{cm.generateCacheKey("/products/full"), cm.extractTagsFromFull},
+		}
+	case strings.HasPrefix(endpoint, "/tags/") && len(params) >= 2:
+		tag := params[1] // If params[0] is "tag", params[1] is the actual tag.
+
+		return []CacheStrategy{
+			{cm.generateCacheKey("/tags/"+tag, "tag", tag), cm.extractExact},
+			{cm.generateCacheKey("/products/full"), func(data json.RawMessage, _ ...string) (json.RawMessage, bool) {
+				return cm.extractProductsByTagFromFull(data, tag)
+			}},
+		}
+	default:
+		// For all other endpoints (/, /identifiers, /identifiers/{type}), only exact cache.
+		return []CacheStrategy{{cm.generateCacheKey(endpoint), cm.extractExact}}
+	}
+}
+
+// tryStrategies recursively tries cache strategies from smallest to largest.
+//
+//nolint:lll // ok
+func (cm *CacheManager) tryStrategies(strategies []CacheStrategy, index int, params ...string) (_ json.RawMessage, found bool) {
+	if index >= len(strategies) {
+		return
+	}
+
+	strategy := strategies[index]
+	if cached, ok := cm.getRawCacheByKey(strategy.CacheKey); ok {
+		if data, extracted := strategy.ExtractFunc(cached, params...); extracted {
+			return data, true
+		}
+	}
+
+	return cm.tryStrategies(strategies, index+1, params...)
+}
+
+// extractExact returns the cached data as-is (no extraction needed).
+func (cm *CacheManager) extractExact(data json.RawMessage, params ...string) (_ json.RawMessage, found bool) {
+	return data, true
+}
+
+// extractProductsFromFull extracts a products list from full products cache.
+//
+//nolint:lll // ok
+func (cm *CacheManager) extractProductsFromFull(data json.RawMessage, params ...string) (_ json.RawMessage, found bool) {
+	fullResponse := map[string]any{}
+	if err := json.Unmarshal(data, &fullResponse); err != nil {
+		return
+	}
+
+	result, ok := fullResponse["result"].([]any)
 	if !ok {
 		return
 	}
 
+	products := make([]map[string]any, 0, len(result))
+
+	for _, p := range result {
+		productMap, ok2 := p.(map[string]any)
+		if !ok2 {
+			continue
+		}
+
+		summary := map[string]any{
+			"name":     productMap["name"],
+			"label":    productMap["label"],
+			"category": productMap["category"],
+			"uri":      fmt.Sprintf("%s/products/%s", cm.baseURL, productMap["name"]),
+		}
+
+		if aliases, ok3 := productMap["aliases"]; ok3 {
+			summary["aliases"] = aliases
+		}
+
+		if tags, ok4 := productMap["tags"]; ok4 {
+			summary["tags"] = tags
+		}
+
+		products = append(products, summary)
+	}
+
+	productsResponse := map[string]any{
+		"schema_version": fullResponse["schema_version"],
+		"total":          len(products),
+		"result":         products,
+	}
+
+	productsJSON, err := json.Marshal(productsResponse)
+	if err != nil {
+		return
+	}
+
+	return productsJSON, true
+}
+
+// extractProductFromFull extracts a specific product from full products cache.
+func (cm *CacheManager) extractProductFromFull(data json.RawMessage, product string) (_ json.RawMessage, found bool) {
+	fullResponse := map[string]any{}
+	if err := json.Unmarshal(data, &fullResponse); err != nil {
+		return
+	}
+
+	result, ok := fullResponse["result"].([]any)
+	if !ok {
+		return
+	}
+
+	for _, p := range result {
+		productMap, ok2 := p.(map[string]any)
+		if !ok2 {
+			continue
+		}
+
+		name, ok2 := productMap["name"].(string)
+		if !ok2 || name != product {
+			continue
+		}
+
+		productResponse := map[string]any{
+			"schema_version": fullResponse["schema_version"],
+			"last_modified":  "2025-01-11T00:00:00Z",
+			"result":         productMap,
+		}
+
+		productJSON, err := json.Marshal(productResponse)
+		if err != nil {
+			return
+		}
+
+		return productJSON, true
+	}
+
+	return
+}
+
+// extractReleaseFromProduct extracts a specific release from product cache.
+//
+//nolint:lll // ok
+func (cm *CacheManager) extractReleaseFromProduct(data json.RawMessage, release string) (_ json.RawMessage, found bool) {
 	fullProductResponse := map[string]any{}
-	if err := json.Unmarshal(productCache, &fullProductResponse); err != nil {
+	if err := json.Unmarshal(data, &fullProductResponse); err != nil {
 		return
 	}
 
@@ -306,18 +494,13 @@ func (cm *CacheManager) GetReleaseFromProductCache(product, release string) (_ j
 	}
 
 	for _, r := range releases {
-		var (
-			releaseMap map[string]any
-			name       string
-		)
-
-		releaseMap, ok = r.(map[string]any)
-		if !ok {
+		releaseMap, ok2 := r.(map[string]any)
+		if !ok2 {
 			continue
 		}
 
-		name, ok = releaseMap["name"].(string)
-		if !ok {
+		name, ok2 := releaseMap["name"].(string)
+		if !ok2 {
 			continue
 		}
 
@@ -339,180 +522,44 @@ func (cm *CacheManager) GetReleaseFromProductCache(product, release string) (_ j
 	return
 }
 
-// GetProductFromFullCache attempts to find a specific product in cached ProductsFull data.
-// Returns the product data and true if found, nil and false if not found or not cached.
-func (cm *CacheManager) GetProductFromFullCache(product string) (_ json.RawMessage, found bool) {
-	if !cm.enabled {
-		return
-	}
-
-	// Look for cached ProductsFull data.
-	fullCache, ok := cm.Get("/products/full")
-	if !ok {
-		return
-	}
-
-	fullResponse := map[string]any{}
-	if err := json.Unmarshal(fullCache, &fullResponse); err != nil {
-		return
-	}
-
-	result, found := fullResponse["result"].([]any)
-	if !found {
-		return
-	}
-
-	for _, p := range result {
-		var (
-			productMap map[string]any
-			name       string
-		)
-
-		productMap, ok = p.(map[string]any)
-		if !ok {
-			continue
-		}
-
-		name, ok = productMap["name"].(string)
-		if !ok {
-			continue
-		}
-
-		if name == product {
-			productResponse := map[string]any{
-				"schema_version": fullResponse["schema_version"],
-				"last_modified":  "2025-01-11T00:00:00Z", // Use a reasonable default.
-				"result":         productMap,
-			}
-
-			productJSON, err := json.Marshal(productResponse)
-			if err != nil {
-				return
-			}
-
-			return productJSON, true
-		}
-	}
-
-	return
-}
-
-// GetProductsFromFullCache attempts to extract a basic products list from cached ProductsFull data.
-// Returns the products data and true if found, nil and false if not found or not cached.
-func (cm *CacheManager) GetProductsFromFullCache() (_ json.RawMessage, found bool) {
-	if !cm.enabled {
-		return
-	}
-
-	fullCache, ok := cm.Get("/products/full")
-	if !ok {
-		return
-	}
-
-	fullResponse := map[string]any{}
-	if err := json.Unmarshal(fullCache, &fullResponse); err != nil {
-		return
-	}
-
-	result, found := fullResponse["result"].([]any)
-	if !found {
-		return
-	}
-
-	products := make([]map[string]any, 0, len(result))
-
-	for _, p := range result {
-		productMap, ok := p.(map[string]any) //nolint:govet // ok
-		if !ok {
-			continue
-		}
-
-		summary := map[string]any{
-			"name":     productMap["name"],
-			"label":    productMap["label"],
-			"category": productMap["category"],
-			"uri":      fmt.Sprintf("https://endoflife.date/api/v1/products/%s", productMap["name"]),
-		}
-
-		if aliases, ok := productMap["aliases"]; ok { //nolint:govet // ok
-			summary["aliases"] = aliases
-		}
-
-		if tags, ok := productMap["tags"]; ok { //nolint:govet // ok
-			summary["tags"] = tags
-		}
-
-		products = append(products, summary)
-	}
-
-	productsResponse := map[string]any{
-		"schema_version": fullResponse["schema_version"],
-		"total":          len(products),
-		"result":         products,
-	}
-
-	productsJSON, err := json.Marshal(productsResponse)
-	if err != nil {
-		return
-	}
-
-	return productsJSON, true
-}
-
-// GetReleaseFromFullCache attempts to find a specific release in cached ProductsFull data.
-// This is similar to GetReleaseFromProductCache but uses the full products cache instead.
+// extractReleaseFromFull extracts a specific release from full products cache.
 //
-//nolint:gocognit,gocyclo,cyclop,funlen // ok
-func (cm *CacheManager) GetReleaseFromFullCache(product, release string) (_ json.RawMessage, found bool) {
-	if !cm.enabled {
+//nolint:gocognit,lll // ok
+func (cm *CacheManager) extractReleaseFromFull(data json.RawMessage, product, release string) (_ json.RawMessage, found bool) {
+	fullResponse := map[string]any{}
+	if err := json.Unmarshal(data, &fullResponse); err != nil {
 		return
 	}
 
-	fullCache, ok := cm.Get("/products/full")
+	result, ok := fullResponse["result"].([]any)
 	if !ok {
 		return
 	}
 
-	fullResponse := map[string]any{}
-	if err := json.Unmarshal(fullCache, &fullResponse); err != nil {
-		return
-	}
-
-	result, found := fullResponse["result"].([]any)
-	if !found {
-		return
-	}
-
 	for _, p := range result {
-		var (
-			productMap map[string]any
-			name       string
-			releases   []any
-		)
-
-		productMap, ok = p.(map[string]any)
-		if !ok {
+		productMap, ok2 := p.(map[string]any)
+		if !ok2 {
 			continue
 		}
 
-		name, ok = productMap["name"].(string)
-		if !ok || name != product {
+		name, ok2 := productMap["name"].(string)
+		if !ok2 || name != product {
 			continue
 		}
 
-		releases, ok = productMap["releases"].([]any)
-		if !ok {
+		releases, ok2 := productMap["releases"].([]any)
+		if !ok2 {
 			continue
 		}
 
 		for _, r := range releases {
-			releaseMap, ok := r.(map[string]any) //nolint:govet // ok
-			if !ok {
+			releaseMap, ok3 := r.(map[string]any)
+			if !ok3 {
 				continue
 			}
 
-			releaseName, ok := releaseMap["name"].(string)
-			if !ok {
+			releaseName, ok3 := releaseMap["name"].(string)
+			if !ok3 {
 				continue
 			}
 
@@ -535,6 +582,231 @@ func (cm *CacheManager) GetReleaseFromFullCache(product, release string) (_ json
 	}
 
 	return
+}
+
+// extractCategoriesFromFull extracts unique categories from full products cache.
+//
+//nolint:lll // ok
+func (cm *CacheManager) extractCategoriesFromFull(data json.RawMessage, params ...string) (_ json.RawMessage, found bool) {
+	fullResponse := map[string]any{}
+	if err := json.Unmarshal(data, &fullResponse); err != nil {
+		return
+	}
+
+	result, ok := fullResponse["result"].([]any)
+	if !ok {
+		return
+	}
+
+	categorySet := map[string]bool{}
+	for _, p := range result {
+		productMap, ok2 := p.(map[string]any)
+		if !ok2 {
+			continue
+		}
+
+		if category, ok3 := productMap["category"].(string); ok3 && category != "" {
+			categorySet[category] = true
+		}
+	}
+
+	categories := make([]map[string]any, 0, len(categorySet))
+	for cat := range categorySet {
+		categories = append(categories, map[string]any{
+			"name": cat,
+			"uri":  cm.baseURL + "/categories/" + cat,
+		})
+	}
+
+	categoriesResponse := map[string]any{
+		"schema_version": fullResponse["schema_version"],
+		"total":          len(categories),
+		"result":         categories,
+	}
+
+	categoriesJSON, err := json.Marshal(categoriesResponse)
+	if err != nil {
+		return
+	}
+
+	return categoriesJSON, true
+}
+
+// extractProductsByCategoryFromFull extracts products by category from full products cache.
+//
+//nolint:lll // ok
+func (cm *CacheManager) extractProductsByCategoryFromFull(data json.RawMessage, category string) (_ json.RawMessage, found bool) {
+	fullResponse := map[string]any{}
+	if err := json.Unmarshal(data, &fullResponse); err != nil {
+		return
+	}
+
+	result, ok := fullResponse["result"].([]any)
+	if !ok {
+		return
+	}
+
+	products := []map[string]any{}
+	for _, p := range result {
+		productMap, ok2 := p.(map[string]any)
+		if !ok2 {
+			continue
+		}
+
+		if productCategory, ok3 := productMap["category"].(string); ok3 && productCategory == category {
+			summary := map[string]any{
+				"name":     productMap["name"],
+				"label":    productMap["label"],
+				"category": productMap["category"],
+				"uri":      fmt.Sprintf("%s/products/%s", cm.baseURL, productMap["name"]),
+			}
+
+			if aliases, ok4 := productMap["aliases"]; ok4 {
+				summary["aliases"] = aliases
+			}
+
+			if tags, ok4 := productMap["tags"]; ok4 {
+				summary["tags"] = tags
+			}
+
+			products = append(products, summary)
+		}
+	}
+
+	productsResponse := map[string]any{
+		"schema_version": fullResponse["schema_version"],
+		"total":          len(products),
+		"result":         products,
+	}
+
+	productsJSON, err := json.Marshal(productsResponse)
+	if err != nil {
+		return
+	}
+
+	return productsJSON, true
+}
+
+// extractTagsFromFull extracts unique tags from full products cache.
+//
+//nolint:gocognit // ok
+func (cm *CacheManager) extractTagsFromFull(data json.RawMessage, params ...string) (_ json.RawMessage, found bool) {
+	fullResponse := map[string]any{}
+	if err := json.Unmarshal(data, &fullResponse); err != nil {
+		return
+	}
+
+	result, ok := fullResponse["result"].([]any)
+	if !ok {
+		return
+	}
+
+	tagSet := map[string]bool{}
+	for _, p := range result {
+		productMap, ok2 := p.(map[string]any)
+		if !ok2 {
+			continue
+		}
+
+		if tagsInterface, ok3 := productMap["tags"]; ok3 {
+			if tags, ok4 := tagsInterface.([]any); ok4 {
+				for _, tagInterface := range tags {
+					if tag, ok5 := tagInterface.(string); ok5 && tag != "" {
+						tagSet[tag] = true
+					}
+				}
+			}
+		}
+	}
+
+	tags := make([]map[string]any, 0, len(tagSet))
+	for tag := range tagSet {
+		tags = append(tags, map[string]any{
+			"name": tag,
+			"uri":  cm.baseURL + "/tags/" + tag,
+		})
+	}
+
+	tagsResponse := map[string]any{
+		"schema_version": fullResponse["schema_version"],
+		"total":          len(tags),
+		"result":         tags,
+	}
+
+	tagsJSON, err := json.Marshal(tagsResponse)
+	if err != nil {
+		return
+	}
+
+	return tagsJSON, true
+}
+
+// extractProductsByTagFromFull extracts products by tag from full products cache.
+//
+//nolint:gocognit // ok
+func (cm *CacheManager) extractProductsByTagFromFull(data json.RawMessage, tag string) (_ json.RawMessage, found bool) {
+	fullResponse := map[string]any{}
+	if err := json.Unmarshal(data, &fullResponse); err != nil {
+		return
+	}
+
+	result, ok := fullResponse["result"].([]any)
+	if !ok {
+		return
+	}
+
+	products := []map[string]any{}
+	for _, p := range result {
+		productMap, ok2 := p.(map[string]any)
+		if !ok2 {
+			continue
+		}
+
+		hasTag := false
+
+		if tagsInterface, ok3 := productMap["tags"]; ok3 {
+			if tags, ok4 := tagsInterface.([]any); ok4 {
+				for _, tagInterface := range tags {
+					if productTag, ok5 := tagInterface.(string); ok5 && productTag == tag {
+						hasTag = true
+						break
+					}
+				}
+			}
+		}
+
+		if hasTag {
+			summary := map[string]any{
+				"name":     productMap["name"],
+				"label":    productMap["label"],
+				"category": productMap["category"],
+				"uri":      fmt.Sprintf("%s/products/%s", cm.baseURL, productMap["name"]),
+			}
+
+			if aliases, ok3 := productMap["aliases"]; ok3 {
+				summary["aliases"] = aliases
+			}
+
+			if tags, ok3 := productMap["tags"]; ok3 {
+				summary["tags"] = tags
+			}
+
+			products = append(products, summary)
+		}
+	}
+
+	productsResponse := map[string]any{
+		"schema_version": fullResponse["schema_version"],
+		"total":          len(products),
+		"result":         products,
+	}
+
+	productsJSON, err := json.Marshal(productsResponse)
+	if err != nil {
+		return
+	}
+
+	return productsJSON, true
 }
 
 // ensureCacheDir creates the cache directory if it doesn't exist.

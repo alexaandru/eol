@@ -3,6 +3,7 @@ package eol
 import (
 	"bytes"
 	"context"
+	"net/http"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -1789,7 +1790,7 @@ func createTestClient(t *testing.T, _ context.Context, responses map[string]*moc
 	t.Helper()
 
 	mockClient := newMockClient(responses)
-	cacheManager := NewCacheManager(filepath.Join(t.TempDir(), "eol-cache"), true, time.Hour)
+	cacheManager := NewCacheManager(filepath.Join(t.TempDir(), "eol-cache"), DefaultBaseURL, true, time.Hour)
 	config := &Config{Command: command, Args: args, Format: FormatText}
 
 	client, err := New(
@@ -1809,58 +1810,19 @@ func createMockResponses(t *testing.T) map[string]*mockResponse {
 	t.Helper()
 
 	return map[string]*mockResponse{
-		"https://endoflife.date/api/v1/": {
-			StatusCode: 200,
-			Body:       newIndexResponseBody(),
-		},
-		"https://endoflife.date/api/v1/products": {
-			StatusCode: 200,
-			Body:       newProductsResponseBody(),
-		},
-		"https://endoflife.date/api/v1/products/full": {
-			StatusCode: 200,
-			Body:       newProductsResponseBody(),
-		},
-		"https://endoflife.date/api/v1/products/ubuntu": {
-			StatusCode: 200,
-			Body:       newProductResponseBody(),
-		},
-		"https://endoflife.date/api/v1/products/go": {
-			StatusCode: 200,
-			Body:       newProductResponseBody(),
-		},
-		"https://endoflife.date/api/v1/products/ubuntu/releases/latest": {
-			StatusCode: 200,
-			Body:       newLatestResponseBody(),
-		},
-		"https://endoflife.date/api/v1/products/go/releases/1.24": {
-			StatusCode: 200,
-			Body:       newReleaseResponseBody(),
-		},
-		"https://endoflife.date/api/v1/categories": {
-			StatusCode: 200,
-			Body:       newCategoriesResponseBody(),
-		},
-		"https://endoflife.date/api/v1/categories/lang": {
-			StatusCode: 200,
-			Body:       newProductsResponseBody(),
-		},
-		"https://endoflife.date/api/v1/tags": {
-			StatusCode: 200,
-			Body:       newTagsResponseBody(),
-		},
-		"https://endoflife.date/api/v1/tags/google": {
-			StatusCode: 200,
-			Body:       newProductsResponseBody(),
-		},
-		"https://endoflife.date/api/v1/identifiers": {
-			StatusCode: 200,
-			Body:       newIdentifierTypesResponseBody(),
-		},
-		"https://endoflife.date/api/v1/identifiers/cpe": {
-			StatusCode: 200,
-			Body:       newIdentifiersResponseBody(),
-		},
+		DefaultBaseURL + "/":                                {Code: http.StatusOK, Body: newIndexResponseBody()},
+		DefaultBaseURL + "/products":                        {Code: http.StatusOK, Body: newProductsResponseBody()},
+		DefaultBaseURL + "/products/full":                   {Code: http.StatusOK, Body: newProductsResponseBody()},
+		DefaultBaseURL + "/products/ubuntu":                 {Code: http.StatusOK, Body: newProductResponseBody()},
+		DefaultBaseURL + "/products/go":                     {Code: http.StatusOK, Body: newProductResponseBody()},
+		DefaultBaseURL + "/products/ubuntu/releases/latest": {Code: http.StatusOK, Body: newLatestResponseBody()},
+		DefaultBaseURL + "/products/go/releases/1.24":       {Code: http.StatusOK, Body: newReleaseResponseBody()},
+		DefaultBaseURL + "/categories":                      {Code: http.StatusOK, Body: newCategoriesResponseBody()},
+		DefaultBaseURL + "/categories/lang":                 {Code: http.StatusOK, Body: newProductsResponseBody()},
+		DefaultBaseURL + "/tags":                            {Code: http.StatusOK, Body: newTagsResponseBody()},
+		DefaultBaseURL + "/tags/google":                     {Code: http.StatusOK, Body: newProductsResponseBody()},
+		DefaultBaseURL + "/identifiers":                     {Code: http.StatusOK, Body: newIdentifierTypesResponseBody()},
+		DefaultBaseURL + "/identifiers/cpe":                 {Code: http.StatusOK, Body: newIdentifiersResponseBody()},
 	}
 }
 
@@ -1899,8 +1861,8 @@ func newCategoriesResponseBody() string {
 		"schema_version": "1.2.0",
 		"total": 2,
 		"result": [
-			{"name": "lang", "uri": "https://endoflife.date/api/v1/categories/lang"},
-			{"name": "os", "uri": "https://endoflife.date/api/v1/categories/os"}
+			{"name": "lang", "uri": "` + DefaultBaseURL + `/categories/lang"},
+			{"name": "os", "uri": "` + DefaultBaseURL + `/categories/os"}
 		]
 	}`
 }
@@ -1910,8 +1872,8 @@ func newTagsResponseBody() string {
 		"schema_version": "1.2.0",
 		"total": 2,
 		"result": [
-			{"name": "google", "uri": "https://endoflife.date/api/v1/tags/google"},
-			{"name": "lang", "uri": "https://endoflife.date/api/v1/tags/lang"}
+			{"name": "google", "uri": "` + DefaultBaseURL + `/tags/google"},
+			{"name": "lang", "uri": "` + DefaultBaseURL + `/tags/lang"}
 		]
 	}`
 }
@@ -1921,8 +1883,8 @@ func newIdentifierTypesResponseBody() string {
 		"schema_version": "1.2.0",
 		"total": 2,
 		"result": [
-			{"name": "cpe", "uri": "https://endoflife.date/api/v1/identifiers/cpe/"},
-			{"name": "purl", "uri": "https://endoflife.date/api/v1/identifiers/purl/"}
+			{"name": "cpe", "uri": "` + DefaultBaseURL + `/identifiers/cpe/"},
+			{"name": "purl", "uri": "` + DefaultBaseURL + `/identifiers/purl/"}
 		]
 	}`
 }

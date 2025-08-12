@@ -45,7 +45,7 @@ linters:
         - pattern: "context.TODO"
           msg: "Use t.Context() in tests instead of context.TODO()"
     funlen:
-      lines: 60
+      lines: 65
       statements: 40
       ignore-comments: true
     gocognit:

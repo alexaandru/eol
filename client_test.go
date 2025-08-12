@@ -16,7 +16,7 @@ func TestNew(t *testing.T) {
 		Timeout:   DefaultTimeout,
 		Transport: &mockTransport{responses: map[string]*mockResponse{}, err: nil},
 	}
-	cacheManager := NewCacheManager(t.TempDir(), true, time.Hour)
+	cacheManager := NewCacheManager(t.TempDir(), DefaultBaseURL, true, time.Hour)
 
 	client, err := New(WithHTTPClient(mockClient), WithCacheManager(cacheManager))
 	if err != nil {
@@ -130,7 +130,7 @@ func TestNewWithOptions(t *testing.T) {
 		{
 			name: "with custom cache manager",
 			opts: []Option{
-				WithCacheManager(NewCacheManager("/tmp/custom", true, 30*time.Minute)),
+				WithCacheManager(NewCacheManager("/tmp/custom", DefaultBaseURL, true, 30*time.Minute)),
 			},
 			validate: func(t *testing.T, c *Client) {
 				t.Helper()
@@ -222,7 +222,7 @@ func TestNewWithOptions(t *testing.T) {
 			hasCacheManager := tt.name == "with custom cache manager"
 
 			if !hasCacheManager {
-				cacheManager := NewCacheManager(t.TempDir(), true, time.Hour)
+				cacheManager := NewCacheManager(t.TempDir(), DefaultBaseURL, true, time.Hour)
 				opts = append(opts, WithCacheManager(cacheManager))
 			}
 
@@ -256,7 +256,7 @@ func TestNewWithInvalidConfig(t *testing.T) {
 			t.Parallel()
 
 			opts := tt.opts
-			cacheManager := NewCacheManager(t.TempDir(), true, time.Hour)
+			cacheManager := NewCacheManager(t.TempDir(), DefaultBaseURL, true, time.Hour)
 			opts = append(opts, WithCacheManager(cacheManager))
 
 			_, err := New(opts...)
@@ -311,9 +311,9 @@ func TestClientHandleValidation(t *testing.T) {
 			t.Parallel()
 
 			mockClient := newMockClient(map[string]*mockResponse{
-				"https://endoflife.date/api/v1/": {StatusCode: 200, Body: newIndexResponseBody()},
+				DefaultBaseURL + "/": {Code: 200, Body: newIndexResponseBody()},
 			})
-			cacheManager := NewCacheManager(t.TempDir(), true, time.Hour)
+			cacheManager := NewCacheManager(t.TempDir(), DefaultBaseURL, true, time.Hour)
 
 			client, err := New(WithHTTPClient(mockClient), WithCacheManager(cacheManager), WithInitialArgs(tt.args))
 			if err != nil {
@@ -393,7 +393,7 @@ func TestClientBuildURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			cacheManager := NewCacheManager(t.TempDir(), true, time.Hour)
+			cacheManager := NewCacheManager(t.TempDir(), tt.baseURL, true, time.Hour)
 
 			client, err := New(WithBaseURL(mustParseURL(tt.baseURL)), WithCacheManager(cacheManager))
 			if err != nil {
@@ -443,11 +443,11 @@ func TestClientHandle(t *testing.T) {
 			t.Parallel()
 
 			mockClient := newMockClient(map[string]*mockResponse{
-				"https://endoflife.date/api/v1/":            {StatusCode: 200, Body: newIndexResponseBody()},
-				"https://endoflife.date/api/v1/products":    {StatusCode: 200, Body: newProductsResponseBody()},
-				"https://endoflife.date/api/v1/products/go": {StatusCode: 200, Body: newProductResponseBody()},
+				DefaultBaseURL + "/":            {Code: 200, Body: newIndexResponseBody()},
+				DefaultBaseURL + "/products":    {Code: 200, Body: newProductsResponseBody()},
+				DefaultBaseURL + "/products/go": {Code: 200, Body: newProductResponseBody()},
 			})
-			cacheManager := NewCacheManager(t.TempDir(), true, time.Hour)
+			cacheManager := NewCacheManager(t.TempDir(), DefaultBaseURL, true, time.Hour)
 
 			client, err := New(WithHTTPClient(mockClient), WithCacheManager(cacheManager), WithInitialArgs(tt.args))
 			if err != nil {
@@ -477,8 +477,8 @@ func newIndexResponseBody() string {
 		"schema_version": "1.2.0",
 		"total": 2,
 		"result": [
-			{"name": "products", "uri": "https://endoflife.date/api/v1/products"},
-			{"name": "categories", "uri": "https://endoflife.date/api/v1/categories"}
+			{"name": "products", "uri": "` + DefaultBaseURL + `/products"},
+			{"name": "categories", "uri": "` + DefaultBaseURL + `/categories"}
 		]
 	}`
 }
@@ -492,7 +492,7 @@ func newProductsResponseBody() string {
 				"name": "go",
 				"label": "Go",
 				"category": "lang",
-				"uri": "https://endoflife.date/api/v1/products/go",
+				"uri": "` + DefaultBaseURL + `/products/go",
 				"aliases": ["golang"],
 				"tags": ["google", "lang"]
 			}
@@ -533,7 +533,7 @@ func TestConstants(t *testing.T) {
 	t.Parallel()
 
 	if DefaultBaseURL != "https://endoflife.date/api/v1" {
-		t.Errorf("Expected defaultBaseURL to be 'https://endoflife.date/api/v1', got %s", DefaultBaseURL)
+		t.Errorf("Expected defaultBaseURL to be '%s', got %s", "https://endoflife.date/api/v1", DefaultBaseURL)
 	}
 
 	if DefaultTimeout != 30*time.Second {

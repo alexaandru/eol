@@ -1,7 +1,6 @@
 package eol
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 )
@@ -27,15 +26,6 @@ func (c *Client) Index() (r *UriListResponse, err error) {
 // Products returns a list of all available products.
 func (c *Client) Products() (r *ProductListResponse, err error) {
 	r = &ProductListResponse{}
-
-	// Smart caching: First check if we can get the products list from cached ProductsFull data.
-	if cachedProducts, found := c.cacheManager.GetProductsFromFullCache(); found {
-		if err = json.Unmarshal(cachedProducts, r); err == nil {
-			return r, nil // Cache hit from full products data.
-		}
-	}
-
-	// If not found in full cache, proceed with normal API call.
 	if err = c.doRequest("/products", r); err != nil {
 		return nil, fmt.Errorf("failed to get products: %w", err)
 	}
@@ -54,92 +44,59 @@ func (c *Client) ProductsFull() (r *FullProductListResponse, err error) {
 }
 
 // Product returns details for a specific product.
-func (c *Client) Product(product string) (r *ProductResponse, err error) {
-	if product == "" {
+func (c *Client) Product(p string) (r *ProductResponse, err error) {
+	if p == "" {
 		return nil, errProductNameEmpty
 	}
 
 	r = &ProductResponse{}
-
-	// Smart caching: First check if we can get the product from cached ProductsFull data.
-	if cachedProduct, found := c.cacheManager.GetProductFromFullCache(product); found {
-		if err = json.Unmarshal(cachedProduct, r); err == nil {
-			return r, nil // Cache hit from full products data.
-		}
-	}
-
-	// If not found in full cache, proceed with normal API call.
-	endpoint := "/products/" + product
-	if err = c.doRequest(endpoint, r, product); err != nil {
-		return nil, fmt.Errorf("failed to get product %s: %w", product, err)
+	if err = c.doRequest("/products/"+p, r, p); err != nil {
+		return nil, fmt.Errorf("failed to get product %s: %w", p, err)
 	}
 
 	return
 }
 
 // ProductRelease returns information about a specific product release cycle.
-func (c *Client) ProductRelease(product, release string) (r *ProductReleaseResponse, err error) { //nolint:varnamelen,lll // ok
-	if product == "" {
+func (c *Client) ProductRelease(p, rls string) (r *ProductReleaseResponse, err error) {
+	if p == "" {
 		return nil, errProductNameEmpty
 	}
 
-	if release == "" {
+	if rls == "" {
 		return nil, errReleaseNameEmpty
 	}
 
 	r = &ProductReleaseResponse{}
+	nrls := normalizeVersion(rls)
 
-	// Smart caching: First check if we can get the release from cached ProductsFull data.
-	if cachedRelease, found := c.cacheManager.GetReleaseFromFullCache(product, release); found {
-		if err = json.Unmarshal(cachedRelease, r); err == nil {
-			return r, nil // Cache hit from full products data.
-		}
-	}
-
-	// Fallback: Check if we can get the release from cached individual product data.
-	if cachedRelease, found := c.cacheManager.GetReleaseFromProductCache(product, release); found {
-		if err = json.Unmarshal(cachedRelease, r); err == nil {
-			return r, nil // Cache hit from product data.
-		}
-	}
-
-	// If not found in product cache, proceed with normal API calls.
-	var (
-		normalizedRelease = normalizeVersion(release)
-		endpoint          = fmt.Sprintf("/products/%s/releases/%s", product, normalizedRelease)
-	)
-
-	err = c.doRequest(endpoint, r, product, normalizedRelease)
+	err = c.doRequest("/products/"+p+"/releases/"+nrls, r, p, nrls)
 	if err != nil {
-		// If normalization was applied and it failed, try with original version.
-		if normalizedRelease != release {
-			originalEndpoint := fmt.Sprintf("/products/%s/releases/%s", product, release)
-			if originalErr := c.doRequest(originalEndpoint, &r, product, release); originalErr == nil {
+		if nrls != rls { // If normalization was applied and it failed, try with original version.
+			if originalErr := c.doRequest("/products/"+p+"/releases/"+rls, &r, p, rls); originalErr == nil {
 				return r, nil
 			}
 
 			// Both attempts failed, provide helpful error message.
 			return nil, fmt.Errorf("failed to get release %s for product %s (also tried %s): %w",
-				release, product, normalizedRelease, err)
+				rls, p, nrls, err)
 		}
 
-		return nil, fmt.Errorf("failed to get release %s for product %s: %w", release, product, err)
+		return nil, fmt.Errorf("failed to get release %s for product %s: %w", rls, p, err)
 	}
 
 	return
 }
 
 // ProductLatestRelease returns information about the latest release cycle for a product.
-func (c *Client) ProductLatestRelease(product string) (r *ProductReleaseResponse, err error) {
-	if product == "" {
+func (c *Client) ProductLatestRelease(p string) (r *ProductReleaseResponse, err error) {
+	if p == "" {
 		return nil, errProductNameEmpty
 	}
 
 	r = &ProductReleaseResponse{}
-
-	endpoint := fmt.Sprintf("/products/%s/releases/latest", product)
-	if err = c.doRequest(endpoint, r, product, "latest"); err != nil {
-		return nil, fmt.Errorf("failed to get latest release for product %s: %w", product, err)
+	if err = c.doRequest("/products/"+p+"/releases/latest", r, p, "latest"); err != nil {
+		return nil, fmt.Errorf("failed to get latest release for product %s: %w", p, err)
 	}
 
 	return
@@ -156,16 +113,14 @@ func (c *Client) Categories() (r *UriListResponse, err error) {
 }
 
 // ProductsByCategory returns all products in a specific category.
-func (c *Client) ProductsByCategory(category string) (r *ProductListResponse, err error) {
-	if category == "" {
+func (c *Client) ProductsByCategory(cat string) (r *ProductListResponse, err error) {
+	if cat == "" {
 		return nil, errCategoryNameEmpty
 	}
 
 	r = &ProductListResponse{}
-
-	endpoint := "/categories/" + category
-	if err = c.doRequest(endpoint, r, "category", category); err != nil {
-		return nil, fmt.Errorf("failed to get products for category %s: %w", category, err)
+	if err = c.doRequest("/categories/"+cat, r, "category", cat); err != nil {
+		return nil, fmt.Errorf("failed to get products for category %s: %w", cat, err)
 	}
 
 	return
@@ -188,9 +143,7 @@ func (c *Client) ProductsByTag(tag string) (r *ProductListResponse, err error) {
 	}
 
 	r = &ProductListResponse{}
-
-	endpoint := "/tags/" + tag
-	if err = c.doRequest(endpoint, r, "tag", tag); err != nil {
+	if err = c.doRequest("/tags/"+tag, r, "tag", tag); err != nil {
 		return nil, fmt.Errorf("failed to get products for tag %s: %w", tag, err)
 	}
 
@@ -208,16 +161,14 @@ func (c *Client) IdentifierTypes() (r *UriListResponse, err error) {
 }
 
 // IdentifiersByType returns all identifiers for a given type.
-func (c *Client) IdentifiersByType(identifierType string) (r *IdentifierListResponse, err error) {
-	if identifierType == "" {
+func (c *Client) IdentifiersByType(typ string) (r *IdentifierListResponse, err error) {
+	if typ == "" {
 		return nil, errIdentifierTypeEmpty
 	}
 
 	r = &IdentifierListResponse{}
-
-	endpoint := "/identifiers/" + identifierType
-	if err = c.doRequest(endpoint, r, "identifier", identifierType); err != nil {
-		return nil, fmt.Errorf("failed to get identifiers for type %s: %w", identifierType, err)
+	if err = c.doRequest("/identifiers/"+typ, r, "identifier", typ); err != nil {
+		return nil, fmt.Errorf("failed to get identifiers for type %s: %w", typ, err)
 	}
 
 	return

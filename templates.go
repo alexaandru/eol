@@ -46,8 +46,8 @@ func NewTemplateManager(overrideDir, inlineTemplate, command string, args []stri
 	tm = &TemplateManager{
 		overrideDir: overrideDir,
 		funcMap:     getTemplateFuncMap(),
-		templates:   make(map[string]*template.Template),
-		sources:     make(map[string]string),
+		templates:   map[string]*template.Template{},
+		sources:     map[string]string{},
 	}
 
 	targetTemplateName := ""
