@@ -72,12 +72,21 @@ var (
 	// ErrNeedHelp indicates that help was requested by the user.
 	ErrNeedHelp = errors.New("help requested")
 
-	errProductReleaseNameRequired = errors.New("product name and release name required")
-	errProductNameRequired        = errors.New("product name is required")
-	errCacheSubcommandRequired    = errors.New("cache subcommand is required (stats, clear)")
-	errOutputDirectoryRequired    = errors.New("output directory is required")
-	errUnknownResponseType        = errors.New("unknown response type")
-	errUnknownCommand             = errors.New("unknown command")
+	// ErrUsage indicates a command usage error (wrong flags, missing args, etc.)
+	ErrUsage = errors.New("usage error")
+
+	// Usage errors.
+	errProductReleaseNameRequired = fmt.Errorf("%w: product name and release name required", ErrUsage)
+	errProductNameRequired        = fmt.Errorf("%w: product name is required", ErrUsage)
+	errCacheSubcommandRequired    = fmt.Errorf("%w: cache subcommand is required (stats, clear)", ErrUsage)
+	errOutputDirectoryRequired    = fmt.Errorf("%w: output directory is required", ErrUsage)
+	errUnknownCommand             = fmt.Errorf("%w: unknown command", ErrUsage)
+
+	// Other errors.
+	errUnknownResponseType           = errors.New("unknown response type")
+	errCacheClearFailed              = errors.New("failed to clear cache")
+	errFailedToExportTemplates       = errors.New("failed to export templates")
+	errFailedToExecuteInlineTemplate = errors.New("failed to execute inline template")
 )
 
 //go:embed completions/bash.sh
@@ -229,7 +238,7 @@ func (c *Client) FormatFullProducts(products *FullProductListResponse) (result [
 func (c *Client) HandleIndex() (err error) {
 	response, err := c.Index()
 	if err != nil {
-		return fmt.Errorf("failed to get index: %w", err)
+		return
 	}
 
 	c.response = &IndexResponse{UriListResponse: response}
@@ -247,7 +256,7 @@ func (c *Client) HandleProducts() (err error) {
 		var r *FullProductListResponse
 
 		if r, err = c.ProductsFull(); err != nil {
-			return fmt.Errorf("failed to get full products: %w", err)
+			return
 		}
 
 		c.response = r
@@ -256,7 +265,7 @@ func (c *Client) HandleProducts() (err error) {
 		var r *ProductListResponse
 
 		if r, err = c.Products(); err != nil {
-			return fmt.Errorf("failed to get products: %w", err)
+			return
 		}
 
 		c.response = r
@@ -279,7 +288,7 @@ func (c *Client) HandleProduct() (err error) {
 
 	response, err := c.Product(productName)
 	if err != nil {
-		return fmt.Errorf("failed to get product %s: %w", productName, err)
+		return
 	}
 
 	c.response = response
@@ -301,7 +310,7 @@ func (c *Client) HandleRelease() (err error) {
 
 	response, err := c.ProductRelease(productName, cycle)
 	if err != nil {
-		return fmt.Errorf("failed to get release %s/%s: %w", productName, cycle, err)
+		return
 	}
 
 	c.response = response
@@ -321,7 +330,7 @@ func (c *Client) HandleLatest() (err error) {
 
 	response, err := c.ProductLatestRelease(productName)
 	if err != nil {
-		return fmt.Errorf("failed to get latest release for %s: %w", productName, err)
+		return
 	}
 
 	c.response = response
@@ -337,7 +346,7 @@ func (c *Client) HandleCategories() (err error) {
 		var response *UriListResponse
 
 		if response, err = c.Categories(); err != nil {
-			return fmt.Errorf("failed to get categories: %w", err)
+			return
 		}
 
 		c.response = &CategoriesResponse{UriListResponse: response}
@@ -345,7 +354,7 @@ func (c *Client) HandleCategories() (err error) {
 		var response *ProductListResponse
 
 		if response, err = c.ProductsByCategory(args[0]); err != nil {
-			return fmt.Errorf("failed to get products for category %s: %w", args[0], err)
+			return
 		}
 
 		c.response = &CategoryProductsResponse{
@@ -365,7 +374,7 @@ func (c *Client) HandleTags() (err error) {
 		var response *UriListResponse
 
 		if response, err = c.Tags(); err != nil {
-			return fmt.Errorf("failed to get tags: %w", err)
+			return
 		}
 
 		c.response = &TagsResponse{UriListResponse: response}
@@ -373,7 +382,7 @@ func (c *Client) HandleTags() (err error) {
 		var response *ProductListResponse
 
 		if response, err = c.ProductsByTag(args[0]); err != nil {
-			return fmt.Errorf("failed to get products for tag %s: %w", args[0], err)
+			return
 		}
 
 		c.response = &TagProductsResponse{
@@ -393,7 +402,7 @@ func (c *Client) HandleIdentifiers() (err error) {
 		var response *UriListResponse
 
 		if response, err = c.IdentifierTypes(); err != nil {
-			return fmt.Errorf("failed to get identifier types: %w", err)
+			return
 		}
 
 		c.response = &IdentifierTypesResponse{UriListResponse: response}
@@ -402,7 +411,7 @@ func (c *Client) HandleIdentifiers() (err error) {
 
 		identifierType := args[0]
 		if response, err = c.IdentifiersByType(identifierType); err != nil {
-			return fmt.Errorf("failed to get identifiers for type %s: %w", identifierType, err)
+			return
 		}
 
 		c.response = &TypeIdentifiersResponse{
@@ -420,7 +429,7 @@ func (c *Client) HandleCacheStats() (err error) {
 	var stats CacheStats
 
 	if stats, err = c.cacheManager.GetStats(); err != nil {
-		return fmt.Errorf("failed to get cache stats: %w", err)
+		return
 	}
 
 	c.response = &stats
@@ -431,7 +440,7 @@ func (c *Client) HandleCacheStats() (err error) {
 // HandleCacheClear handles the cache clear command.
 func (c *Client) HandleCacheClear() (err error) {
 	if err = c.cacheManager.Clear(); err != nil {
-		return fmt.Errorf("failed to clear cache: %w", err)
+		return fmt.Errorf("%w: %w", errCacheClearFailed, err)
 	}
 
 	// Special case: cache clear just prints a message, no template formatting.
@@ -443,11 +452,7 @@ func (c *Client) HandleCacheClear() (err error) {
 // HandleTemplates handles the templates list command.
 func (c *Client) HandleTemplates() (err error) { //nolint:unparam // ok
 	templates := c.templateManager.ListTemplates()
-
-	c.response = &TemplateListResponse{
-		Templates: templates,
-		Total:     len(templates),
-	}
+	c.response = &TemplateListResponse{Templates: templates, Total: len(templates)}
 	c.responseHeader = fmt.Sprintf("Available templates - %d total:", len(templates))
 
 	return
@@ -462,7 +467,7 @@ func (c *Client) HandleTemplateExport() (err error) {
 
 	outputDir := args[0]
 	if err = c.templateManager.ExportTemplates(outputDir); err != nil {
-		return fmt.Errorf("failed to export templates: %w", err)
+		return fmt.Errorf("%w: %w", errFailedToExportTemplates, err)
 	}
 
 	c.response = &TemplateExportResponse{
@@ -516,7 +521,7 @@ func (c *Client) executeInlineTemplate(response any) (err error) {
 
 	result, err := c.templateManager.ExecuteInline(c.config.InlineTemplate, data)
 	if err != nil {
-		return fmt.Errorf("failed to execute inline template: %w", err)
+		return fmt.Errorf("%w: %w", errFailedToExecuteInlineTemplate, err)
 	}
 
 	c.Print(string(result))

@@ -1,7 +1,6 @@
 package eol
 
 import (
-	"errors"
 	"testing"
 	"time"
 )
@@ -292,99 +291,6 @@ func TestConfigParseGlobalFlags(t *testing.T) {
 
 			if tt.validate != nil {
 				tt.validate(t, c)
-			}
-		})
-	}
-}
-
-func TestConfigValidateArgs(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		errorType   error
-		name        string
-		args        []string
-		expectError bool
-	}{
-		{
-			name: "valid index command",
-			args: []string{"index"},
-		},
-		{
-			name: "valid products command",
-			args: []string{"products"},
-		},
-		{
-			name: "valid products with full flag",
-			args: []string{"products", "--full"},
-		},
-		{
-			name: "valid product command",
-			args: []string{"product", "ubuntu"},
-		},
-		{
-			name: "valid release command",
-			args: []string{"release", "go", "1.24"},
-		},
-		{
-			name: "valid latest command",
-			args: []string{"latest", "ubuntu"},
-		},
-		{
-			name: "valid categories command",
-			args: []string{"categories"},
-		},
-		{
-			name: "valid categories with arg",
-			args: []string{"categories", "os"},
-		},
-		{
-			name: "valid tags command",
-			args: []string{"tags"},
-		},
-		{
-			name: "valid tags with arg",
-			args: []string{"tags", "canonical"},
-		},
-		{
-			name: "valid identifiers command",
-			args: []string{"identifiers"},
-		},
-		{
-			name: "valid cache command",
-			args: []string{"cache", "stats"},
-		},
-		{
-			name: "valid templates command",
-			args: []string{"templates"},
-		},
-		{
-			name:        "empty args",
-			args:        []string{},
-			expectError: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			err := validateArgs(tt.args)
-			if tt.expectError {
-				if err == nil {
-					t.Error("Expected validateArgs to return error")
-					return
-				}
-
-				if tt.errorType != nil && !errors.Is(err, tt.errorType) {
-					t.Errorf("Expected error to be %v, got %v", tt.errorType, err)
-				}
-
-				return
-			}
-
-			if err != nil {
-				t.Errorf("validateArgs returned unexpected error: %v", err)
 			}
 		})
 	}

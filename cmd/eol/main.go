@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/alexaandru/eol"
 )
@@ -20,21 +21,22 @@ func main() {
 	var err error
 
 	defer func() {
-		if err == nil {
-			return
-		}
-
-		if errors.Is(err, eol.ErrNeedHelp) {
+		switch {
+		case err == nil:
+		case errors.Is(err, eol.ErrNeedHelp):
 			printHeader()
 			fmt.Println()
 			printUsage()
-
-			return
+		case errors.Is(err, eol.ErrUsage):
+			msg := err.Error()
+			msg, _ = strings.CutPrefix(msg, "usage error: ")
+			fmt.Printf("Error: %v!\n\n", msg)
+			printUsage()
+			os.Exit(1)
+		default:
+			fmt.Printf("Error: %v!\n", err)
+			os.Exit(2)
 		}
-
-		fmt.Printf("Error: %v!\n\n", err)
-		printUsage()
-		os.Exit(1)
 	}()
 
 	client, err := eol.New()

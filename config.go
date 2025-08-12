@@ -31,7 +31,6 @@ const (
 var (
 	errRequires    = errors.New("requires")
 	errUnsupported = errors.New("unsupported")
-	errInvalid     = errors.New("invalid")
 )
 
 // NewConfig creates a new Config with default values.
@@ -45,8 +44,8 @@ func NewConfig(opts ...string) (c *Config, err error) {
 		args = os.Args[1:]
 	}
 
-	if err = validateArgs(args); err != nil {
-		return
+	if len(args) < 1 {
+		return nil, fmt.Errorf("%w: %w a command", ErrUsage, errRequires)
 	}
 
 	c = &Config{Format: FormatText, CacheEnabled: true, CacheTTL: DefaultCacheTTL}
@@ -57,7 +56,7 @@ func NewConfig(opts ...string) (c *Config, err error) {
 	}
 
 	if len(args) == 0 {
-		return nil, fmt.Errorf("insufficient arguments: %w an argument", errRequires)
+		return nil, fmt.Errorf("%w: %w an argument", ErrUsage, errRequires)
 	}
 
 	c.Command, c.Args = args[0], args[1:]
@@ -75,7 +74,7 @@ func (c *Config) ParseGlobalFlags(args []string) (rest []string, err error) {
 		switch arg {
 		case "-f", "--format":
 			if i+1 >= len(args) {
-				return nil, fmt.Errorf("-f/--format %w a value", errRequires)
+				return nil, fmt.Errorf("%w: -f/--format %w a value", ErrUsage, errRequires)
 			}
 
 			i++
@@ -93,35 +92,35 @@ func (c *Config) ParseGlobalFlags(args []string) (rest []string, err error) {
 			c.CacheEnabled = false
 		case "--cache-dir":
 			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--cache-dir %w a directory path", errRequires)
+				return nil, fmt.Errorf("%w: --cache-dir %w a directory path", ErrUsage, errRequires)
 			}
 
 			i++
 			c.CacheDir = args[i]
 		case "--cache-for":
 			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--cache-for %w a duration", errRequires)
+				return nil, fmt.Errorf("%w: --cache-for %w a duration", ErrUsage, errRequires)
 			}
 
 			var duration time.Duration
 
 			duration, err = time.ParseDuration(args[i+1])
 			if err != nil {
-				return nil, fmt.Errorf("%w duration '%s': %w", errInvalid, args[i+1], err)
+				return nil, err
 			}
 
 			c.CacheTTL = duration
 			i++ // Skip the duration argument.
 		case "--template-dir":
 			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--template-dir %w a directory path", errRequires)
+				return nil, fmt.Errorf("%w: --template-dir %w a directory path", ErrUsage, errRequires)
 			}
 
 			c.TemplateDir = args[i+1]
 			i++ // Skip the directory argument.
 		case "-t", "--template":
 			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--template %w a template string", errRequires)
+				return nil, fmt.Errorf("%w: --template %w a template string", ErrUsage, errRequires)
 			}
 
 			c.InlineTemplate = args[i+1]
@@ -147,12 +146,4 @@ func (c *Config) IsText() bool {
 // HasInlineTemplate returns true if an inline template is specified.
 func (c *Config) HasInlineTemplate() bool {
 	return c.InlineTemplate != ""
-}
-
-func validateArgs(args []string) (err error) {
-	if len(args) < 1 {
-		return fmt.Errorf("insufficient arguments: %w a command", errRequires)
-	}
-
-	return
 }
