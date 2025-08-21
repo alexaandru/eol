@@ -12,6 +12,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: echo "::notice title=Go Version::$(go version)"
+      # Needed until https://github.com/golang/go/issues/75031 is fixed.
+      - run: go env -w GOTOOLCHAIN=go1.25.0+auto
       - run: make test
   Lint:
     runs-on: ubuntu-latest
@@ -27,5 +29,7 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
+      # Needed until https://github.com/golang/go/issues/75031 is fixed.
+      - run: go env -w GOTOOLCHAIN=go1.25.0+auto
       - run: make lint
       - run: make shellcheck

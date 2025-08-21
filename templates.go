@@ -10,9 +10,12 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"text/template"
+	"time"
 )
 
 // TemplateManager manages loading and parsing of templates.
@@ -37,8 +40,12 @@ const (
 //go:embed templates/*.tmpl
 var embeddedTemplates embed.FS
 
-// ErrNoOverrideDir is returned when no template override directory is configured.
-var ErrNoOverrideDir = errors.New("no override directory configured")
+var (
+	errNoOverrideDir           = errors.New("no override directory configured")
+	errInvalidNumberInDuration = errors.New("invalid number in duration")
+)
+
+var reCustomDur = regexp.MustCompile(`^(\d+)(d|wk|mo)$`)
 
 // NewTemplateManager creates a new template manager with eagerly loaded templates.
 // If inlineTemplate is provided, it will override the template inferred from command and args.
@@ -170,7 +177,7 @@ func (tm *TemplateManager) ExecuteInline(templateStr string, data any) (_ []byte
 
 // getTemplateFuncMap returns the standard function map used by all templates.
 //
-//nolint:gocognit,funlen // ok
+//nolint:gocognit,gocyclo,cyclop,funlen // ok
 func getTemplateFuncMap() template.FuncMap {
 	return template.FuncMap{
 		"join": strings.Join,
@@ -237,7 +244,83 @@ func getTemplateFuncMap() template.FuncMap {
 			os.Exit(code)
 			return ""
 		},
+		"eol_within": func(duration string, eolDate any) (ok bool) {
+			var err error
+
+			defer func() {
+				if err != nil {
+					panic(err)
+				}
+			}()
+
+			dur, err := parseExtendedDuration(duration)
+			if err != nil {
+				return
+			}
+
+			if eolDate == nil {
+				return
+			}
+
+			var dateStr string
+
+			switch v := eolDate.(type) {
+			case *string:
+				if v == nil {
+					return
+				}
+
+				dateStr = *v
+			case string:
+				dateStr = v
+			default:
+				return
+			}
+
+			if dateStr == "" {
+				return
+			}
+
+			eolTime, err := time.Parse("2006-01-02", dateStr)
+			if err != nil {
+				return
+			}
+
+			now := time.Now()
+			futureLimit := now.Add(dur)
+
+			return eolTime.After(now) && eolTime.Before(futureLimit)
+		},
 	}
+}
+
+func parseExtendedDuration(dur string) (time.Duration, error) {
+	matches := reCustomDur.FindStringSubmatch(dur)
+
+	if matches != nil {
+		num, err := strconv.Atoi(matches[1])
+		if err != nil {
+			return 0, fmt.Errorf("%w %q: %w", errInvalidNumberInDuration, dur, err)
+		}
+
+		unit := matches[2]
+
+		var hours int
+
+		//nolint:mnd // ok
+		switch unit {
+		case "d":
+			hours = num * 24
+		case "wk":
+			hours = num * 7 * 24
+		case "mo":
+			hours = num * 30 * 24
+		}
+
+		return time.ParseDuration(fmt.Sprintf("%dh", hours))
+	}
+
+	return time.ParseDuration(dur)
 }
 
 //nolint:gocognit,gocyclo,cyclop // ok
@@ -386,7 +469,7 @@ func (tm *TemplateManager) loadOverrideTemplates() (err error) {
 
 func (tm *TemplateManager) loadFromFile(name string) (_ *template.Template, err error) {
 	if tm.overrideDir == "" {
-		return nil, ErrNoOverrideDir
+		return nil, errNoOverrideDir
 	}
 
 	root, err := os.OpenRoot(tm.overrideDir)

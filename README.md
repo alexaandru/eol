@@ -186,6 +186,24 @@ else
 fi
 ```
 
+The `eol_within` function enables proactive EOL monitoring:
+
+```bash
+# Check for upcoming EOL within 6 months
+eol product nodejs -t '{{range .Releases}}{{if eol_within "6mo" .EolFrom}}⚠️  {{.Name}} EOLs {{.EolFrom}}{{"\n"}}{{end}}{{end}}'
+
+# Exit with error if EOL is within 30 days
+eol release ubuntu 20.04 -t '{{if eol_within "30d" .EolFrom}}URGENT: EOL in 30 days!{{exit 2}}{{end}}'
+
+# Monitor multiple releases and exit on first warning
+eol product go -t '{{range .Releases}}{{if eol_within "3mo" .EolFrom}}{{.Name}} EOLs soon: {{.EolFrom}}{{exit 1}}{{end}}{{end}}'
+
+# Use in CI/CD pipelines for dependency checks
+if eol product python -t '{{range .Releases}}{{if eol_within "12mo" .EolFrom}}{{exit 1}}{{end}}{{end}}' 2>/dev/null; then
+    echo "Python version will EOL within a year - plan migration"
+fi
+```
+
 ### Caching & Performance
 
 ```bash
@@ -397,7 +415,28 @@ Available in custom templates:
 - `default "fallback" .Field` - Default values
 - `toJSON .` - Convert to JSON
 - `slice .Releases 0 5` - Slice operations
+- `eol_within "6mo" .EolFrom` - Check if EOL is within duration (supports mo, wk, d, h, m, s)
 - `exit 1` - Exit with error code (for scripting)
+
+## Testing & Coverage
+
+The project includes comprehensive testing with both unit and integration coverage:
+
+```bash
+# Run unit tests with coverage
+make test
+
+# Run integration tests with coverage (tests actual binary execution)
+make integration-coverage
+
+# Run all tests and checks
+make all
+
+# Generate HTML coverage report
+go tool cover -html=integration.cov -o coverage.html
+```
+
+The integration tests use Go's built-in coverage instrumentation (`go build -cover`) to collect coverage data from actual binary execution, following the approach described in the [Go blog](https://go.dev/blog/integration-test-coverage).
 
 ## Contributing
 

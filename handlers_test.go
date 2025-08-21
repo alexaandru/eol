@@ -973,28 +973,28 @@ func TestClientFormat(t *testing.T) {
 	}{
 		{
 			name:     "IndexResponse",
-			response: &IndexResponse{UriListResponse: &UriListResponse{}},
+			response: &IndexResponse{URIListResponse: &URIListResponse{}},
 			checkOutput: func(output []byte) bool {
 				return len(output) > 0
 			},
 		},
 		{
 			name:     "CategoriesResponse",
-			response: &CategoriesResponse{UriListResponse: &UriListResponse{}},
+			response: &CategoriesResponse{URIListResponse: &URIListResponse{}},
 			checkOutput: func(output []byte) bool {
 				return len(output) > 0
 			},
 		},
 		{
 			name:     "TagsResponse",
-			response: &TagsResponse{UriListResponse: &UriListResponse{}},
+			response: &TagsResponse{URIListResponse: &URIListResponse{}},
 			checkOutput: func(output []byte) bool {
 				return len(output) > 0
 			},
 		},
 		{
 			name:     "IdentifierTypesResponse",
-			response: &IdentifierTypesResponse{UriListResponse: &UriListResponse{}},
+			response: &IdentifierTypesResponse{URIListResponse: &URIListResponse{}},
 			checkOutput: func(output []byte) bool {
 				return len(output) > 0
 			},
@@ -1167,13 +1167,13 @@ func TestClientExtractTemplateData(t *testing.T) {
 	}{
 		{
 			name:         "IndexResponse extracts UriListResponse",
-			response:     &IndexResponse{UriListResponse: &UriListResponse{Result: []Uri{{Name: "test", URI: "/test"}}}},
-			expectedType: "*eol.UriListResponse",
+			response:     &IndexResponse{URIListResponse: &URIListResponse{Result: []URI{{Name: "test", URI: "/test"}}}},
+			expectedType: "*eol.URIListResponse",
 			checkFunc: func(t *testing.T, data any) {
 				t.Helper()
 
-				if resp, ok := data.(*UriListResponse); !ok {
-					t.Errorf("Expected *UriListResponse, got %T", data)
+				if resp, ok := data.(*URIListResponse); !ok {
+					t.Errorf("Expected *URIListResponse, got %T", data)
 				} else if len(resp.Result) != 1 || resp.Result[0].Name != "test" {
 					t.Errorf("Expected result with 'test', got %v", resp.Result)
 				}
@@ -1196,12 +1196,12 @@ func TestClientExtractTemplateData(t *testing.T) {
 		{
 			name:         "ProductReleaseResponse extracts Result field",
 			response:     &ProductReleaseResponse{Result: ProductRelease{Name: "1.21", IsLts: true}},
-			expectedType: "*eol.ProductRelease",
+			expectedType: "*eol.CliProductRelease",
 			checkFunc: func(t *testing.T, data any) {
 				t.Helper()
 
-				if resp, ok := data.(*ProductRelease); !ok {
-					t.Errorf("Expected *ProductRelease, got %T", data)
+				if resp, ok := data.(*CliProductRelease); !ok {
+					t.Errorf("Expected *CliProductRelease, got %T", data)
 				} else if resp.Name != "1.21" || !resp.IsLts {
 					t.Errorf("Expected 1.21/true, got %s/%t", resp.Name, resp.IsLts)
 				}

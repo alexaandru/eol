@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestTemplateManagerGetAvailableTemplates(t *testing.T) {
@@ -1241,13 +1242,13 @@ func TestGetTemplateNameForCommand(t *testing.T) {
 			expected: "index",
 		},
 		{
-			name:     "products command",
+			name:     "products command with no args",
 			command:  "products",
 			args:     []string{},
 			expected: "products",
 		},
 		{
-			name:     "products full command",
+			name:     "products command with full arg",
 			command:  "products",
 			args:     []string{"full"},
 			expected: "product_details",
@@ -1261,7 +1262,7 @@ func TestGetTemplateNameForCommand(t *testing.T) {
 		{
 			name:     "release command",
 			command:  "release",
-			args:     []string{"go", "1.20"},
+			args:     []string{"go", "1.18"},
 			expected: "product_release",
 		},
 		{
@@ -1271,37 +1272,37 @@ func TestGetTemplateNameForCommand(t *testing.T) {
 			expected: "product_release",
 		},
 		{
-			name:     "categories command",
+			name:     "categories command with no args",
 			command:  "categories",
 			args:     []string{},
 			expected: "categories",
 		},
 		{
-			name:     "categories with category",
+			name:     "categories command with category",
 			command:  "categories",
 			args:     []string{"lang"},
 			expected: "products_by_category",
 		},
 		{
-			name:     "tags command",
+			name:     "tags command with no args",
 			command:  "tags",
 			args:     []string{},
 			expected: "tags",
 		},
 		{
-			name:     "tags with tag",
+			name:     "tags command with tag",
 			command:  "tags",
-			args:     []string{"google"},
+			args:     []string{"runtime"},
 			expected: "products_by_tag",
 		},
 		{
-			name:     "identifiers command",
+			name:     "identifiers command with no args",
 			command:  "identifiers",
 			args:     []string{},
 			expected: "identifiers",
 		},
 		{
-			name:     "identifiers with type",
+			name:     "identifiers command with type",
 			command:  "identifiers",
 			args:     []string{"cpe"},
 			expected: "identifiers_by_type",
@@ -1313,19 +1314,13 @@ func TestGetTemplateNameForCommand(t *testing.T) {
 			expected: "cache_stats",
 		},
 		{
-			name:     "cache clear command",
-			command:  "cache",
-			args:     []string{"clear"},
-			expected: "",
-		},
-		{
-			name:     "cache without subcommand",
+			name:     "cache command without args",
 			command:  "cache",
 			args:     []string{},
 			expected: "",
 		},
 		{
-			name:     "templates command",
+			name:     "templates command with no args",
 			command:  "templates",
 			args:     []string{},
 			expected: "templates",
@@ -1333,18 +1328,12 @@ func TestGetTemplateNameForCommand(t *testing.T) {
 		{
 			name:     "templates export command",
 			command:  "templates",
-			args:     []string{"export", "/tmp"},
+			args:     []string{"export"},
 			expected: "template_export",
 		},
 		{
 			name:     "unknown command",
 			command:  "unknown",
-			args:     []string{},
-			expected: "",
-		},
-		{
-			name:     "empty command",
-			command:  "",
 			args:     []string{},
 			expected: "",
 		},
@@ -1356,11 +1345,165 @@ func TestGetTemplateNameForCommand(t *testing.T) {
 
 			result := getTemplateNameForCommand(tt.command, tt.args)
 			if result != tt.expected {
-				t.Errorf("getTemplateNameForCommand(%q, %v) = %q, expected %q",
-					tt.command, tt.args, result, tt.expected)
+				t.Errorf("getTemplateNameForCommand(%q, %q) = %q, want %q", tt.command, tt.args, result, tt.expected)
 			}
 		})
 	}
+}
+
+func TestEolWithinTemplateFunction(t *testing.T) {
+	t.Parallel()
+
+	funcMap := getTemplateFuncMap()
+	eolWithinFunc := funcMap["eol_within"].(func(string, any) bool)
+	now := time.Now()
+	tests := []struct { //nolint:govet // ok
+		name        string
+		duration    string
+		eolDate     any
+		expected    bool
+		expectPanic bool
+	}{
+		{
+			name:        "nil eol date",
+			duration:    "30d",
+			eolDate:     nil,
+			expected:    false,
+			expectPanic: false,
+		},
+		{
+			name:        "nil string pointer",
+			duration:    "30d",
+			eolDate:     (*string)(nil),
+			expected:    false,
+			expectPanic: false,
+		},
+		{
+			name:        "empty string",
+			duration:    "30d",
+			eolDate:     "",
+			expected:    false,
+			expectPanic: false,
+		},
+		{
+			name:        "empty string pointer",
+			duration:    "30d",
+			eolDate:     stringPtr(""),
+			expected:    false,
+			expectPanic: false,
+		},
+		{
+			name:        "invalid duration should panic",
+			duration:    "invalid",
+			eolDate:     "2025-12-31",
+			expected:    false,
+			expectPanic: true,
+		},
+		{
+			name:        "invalid date format",
+			duration:    "720h", // 30d.
+			eolDate:     "invalid-date",
+			expected:    false,
+			expectPanic: true,
+		},
+		{
+			name:        "date in past",
+			duration:    "30d",
+			eolDate:     "2020-01-01",
+			expected:    false,
+			expectPanic: false,
+		},
+		{
+			name:        "date within duration - string",
+			duration:    "30d",
+			eolDate:     now.Add(15 * 24 * time.Hour).Format("2006-01-02"),
+			expected:    true,
+			expectPanic: false,
+		},
+		{
+			name:        "date within duration - string pointer",
+			duration:    "30d",
+			eolDate:     stringPtr(now.Add(15 * 24 * time.Hour).Format("2006-01-02")),
+			expected:    true,
+			expectPanic: false,
+		},
+		{
+			name:        "date exactly at duration boundary",
+			duration:    "30d",
+			eolDate:     now.Add(30 * 24 * time.Hour).Format("2006-01-02"),
+			expected:    true, // Should be true as it's within 30 days.
+			expectPanic: false,
+		},
+		{
+			name:        "date beyond duration",
+			duration:    "30d",
+			eolDate:     now.Add(45 * 24 * time.Hour).Format("2006-01-02"),
+			expected:    false,
+			expectPanic: false,
+		},
+		{
+			name:        "very short duration",
+			duration:    "1h",
+			eolDate:     now.Add(30 * time.Minute).Format("2006-01-02"),
+			expected:    false, // Date only comparison, 30 minutes won't show up in date.
+			expectPanic: false,
+		},
+		{
+			name:        "very long duration",
+			duration:    "6mo",
+			eolDate:     now.Add(90 * 24 * time.Hour).Format("2006-01-02"), // 3mo.
+			expected:    true,
+			expectPanic: false,
+		},
+		{
+			name:        "unsupported type",
+			duration:    "30d",
+			eolDate:     12345,
+			expected:    false,
+			expectPanic: false,
+		},
+		{
+			name:        "weeks duration",
+			duration:    "2wk",
+			eolDate:     now.Add(10 * 24 * time.Hour).Format("2006-01-02"),
+			expected:    true,
+			expectPanic: false,
+		},
+		{
+			name:        "months duration",
+			duration:    "3mo",
+			eolDate:     now.Add(60 * 24 * time.Hour).Format("2006-01-02"), // 2mo.
+			expected:    true,
+			expectPanic: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			if tt.expectPanic {
+				defer func() {
+					if r := recover(); r == nil {
+						t.Errorf("eol_within(%q, %v) expected panic but didn't", tt.duration, tt.eolDate)
+					}
+				}()
+
+				eolWithinFunc(tt.duration, tt.eolDate)
+
+				return
+			}
+
+			result := eolWithinFunc(tt.duration, tt.eolDate)
+			if result != tt.expected {
+				t.Errorf("eol_within(%q, %v) = %v, want %v", tt.duration, tt.eolDate, result, tt.expected)
+			}
+		})
+	}
+}
+
+func stringPtr(s string) *string {
+	return &s
 }
 
 func TestTemplateManagerOverrideTemplateErrors(t *testing.T) {

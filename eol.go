@@ -4,8 +4,8 @@ import (
 	"time"
 )
 
-// Uri represents a link to a resource.
-type Uri struct {
+// URI represents a link to a resource.
+type URI struct {
 	Name string `json:"name"`
 	URI  string `json:"uri"`
 }
@@ -42,6 +42,29 @@ type ProductRelease struct {
 	IsLts            bool            `json:"isLts"`
 	IsMaintained     bool            `json:"isMaintained"`
 	IsEol            bool            `json:"isEol"`
+}
+
+// CliProductRelease is a CLI-friendly version of ProductRelease with regular bool fields.
+//
+//nolint:govet // ok
+type CliProductRelease struct {
+	Name             string          `json:"name"`
+	Label            string          `json:"label"`
+	ReleaseDate      string          `json:"releaseDate"`
+	IsLts            bool            `json:"isLts"`
+	IsEol            bool            `json:"isEol"`
+	IsMaintained     bool            `json:"isMaintained"`
+	IsEoas           bool            `json:"isEoas"`
+	IsDiscontinued   bool            `json:"isDiscontinued"`
+	IsEoes           bool            `json:"isEoes"`
+	EolFrom          string          `json:"eolFrom"`
+	LtsFrom          string          `json:"ltsFrom"`
+	EoasFrom         string          `json:"eoasFrom"`
+	EoesFrom         string          `json:"eoesFrom"`
+	DiscontinuedFrom string          `json:"discontinuedFrom"`
+	Codename         string          `json:"codename"`
+	Latest           *ProductVersion `json:"latest"`
+	Custom           map[string]any  `json:"custom,omitempty"`
 }
 
 // ProductSummary contains basic information about a product.
@@ -83,10 +106,10 @@ type ProductDetails struct {
 	Releases       []ProductRelease `json:"releases"`
 }
 
-// UriListResponse represents a response containing a list of URIs.
-type UriListResponse struct {
+// URIListResponse represents a response containing a list of URIs.
+type URIListResponse struct {
 	SchemaVersion string `json:"schema_version"`
-	Result        []Uri  `json:"result"`
+	Result        []URI  `json:"result"`
 	Total         int    `json:"total"`
 }
 
@@ -120,7 +143,7 @@ type ProductReleaseResponse struct {
 // IdentifierProduct represents the product reference in an identifier response.
 type IdentifierProduct struct {
 	Identifier string `json:"identifier"`
-	Product    Uri    `json:"product"`
+	Product    URI    `json:"product"`
 }
 
 // IdentifierListResponse represents a response containing identifiers for a given type.
@@ -128,4 +151,56 @@ type IdentifierListResponse struct {
 	SchemaVersion string              `json:"schema_version"`
 	Result        []IdentifierProduct `json:"result"`
 	Total         int                 `json:"total"`
+}
+
+// ToCliRelease converts a ProductRelease to a CliProductRelease with clean bool fields.
+func (pr *ProductRelease) ToCliRelease() (cli CliProductRelease) {
+	cli = CliProductRelease{
+		Name:         pr.Name,
+		Label:        pr.Label,
+		ReleaseDate:  pr.ReleaseDate,
+		IsLts:        pr.IsLts,
+		IsEol:        pr.IsEol,
+		IsMaintained: pr.IsMaintained,
+		Latest:       pr.Latest,
+		Custom:       pr.Custom,
+	}
+
+	if pr.EolFrom != nil {
+		cli.EolFrom = *pr.EolFrom
+	}
+
+	if pr.LtsFrom != nil {
+		cli.LtsFrom = *pr.LtsFrom
+	}
+
+	if pr.EoasFrom != nil {
+		cli.EoasFrom = *pr.EoasFrom
+	}
+
+	if pr.EoesFrom != nil {
+		cli.EoesFrom = *pr.EoesFrom
+	}
+
+	if pr.DiscontinuedFrom != nil {
+		cli.DiscontinuedFrom = *pr.DiscontinuedFrom
+	}
+
+	if pr.Codename != nil {
+		cli.Codename = *pr.Codename
+	}
+
+	if pr.IsEoas != nil {
+		cli.IsEoas = *pr.IsEoas
+	}
+
+	if pr.IsDiscontinued != nil {
+		cli.IsDiscontinued = *pr.IsDiscontinued
+	}
+
+	if pr.IsEoes != nil {
+		cli.IsEoes = *pr.IsEoes
+	}
+
+	return
 }

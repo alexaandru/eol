@@ -174,6 +174,7 @@
 //   - default - Provide default values
 //   - toJSON - Convert to JSON
 //   - slice - Slice operations
+//   - eol_within - Check if EOL is within duration (supports mo, wk, d, h, m, s)
 //   - exit - Exit with specific code (for scripting)
 //
 // Example template usage:
@@ -181,6 +182,8 @@
 //	eol -t '{{.Latest.Name}}' latest go
 //	eol -t '{{if .IsEol}}💀 EOL{{else}}✅ Active{{end}}' latest terraform
 //	eol -t '{{if .IsEol}}{{exit 1}}{{end}}' release ubuntu 18.04  # Exit code for scripting
+//	eol -t '{{range .Releases}}{{if eol_within "6mo" .EolFrom}}⚠️  {{.Name}} EOLs {{.EolFrom}}{{end}}{{end}}' product go
+//	eol -t '{{if eol_within "30d" .EolFrom}}URGENT: EOL in 30 days!{{exit 2}}{{end}}' release ubuntu 20.04
 //
 // # Performance Considerations
 //

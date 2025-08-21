@@ -14,8 +14,8 @@ var (
 )
 
 // Index returns the main endoflife.date API endpoints.
-func (c *Client) Index() (r *UriListResponse, err error) {
-	r = &UriListResponse{}
+func (c *Client) Index() (r *URIListResponse, err error) {
+	r = &URIListResponse{}
 	if err = c.doRequest("/", r); err != nil {
 		return nil, fmt.Errorf("failed to get API index: %w", err)
 	}
@@ -103,8 +103,8 @@ func (c *Client) ProductLatestRelease(p string) (r *ProductReleaseResponse, err 
 }
 
 // Categories returns a list of all categories.
-func (c *Client) Categories() (r *UriListResponse, err error) {
-	r = &UriListResponse{}
+func (c *Client) Categories() (r *URIListResponse, err error) {
+	r = &URIListResponse{}
 	if err = c.doRequest("/categories", r); err != nil {
 		return nil, fmt.Errorf("failed to get categories: %w", err)
 	}
@@ -127,8 +127,8 @@ func (c *Client) ProductsByCategory(cat string) (r *ProductListResponse, err err
 }
 
 // Tags returns a list of all tags.
-func (c *Client) Tags() (r *UriListResponse, err error) {
-	r = &UriListResponse{}
+func (c *Client) Tags() (r *URIListResponse, err error) {
+	r = &URIListResponse{}
 	if err = c.doRequest("/tags", r); err != nil {
 		return nil, fmt.Errorf("failed to get tags: %w", err)
 	}
@@ -151,8 +151,8 @@ func (c *Client) ProductsByTag(tag string) (r *ProductListResponse, err error) {
 }
 
 // IdentifierTypes returns a list of all identifier types.
-func (c *Client) IdentifierTypes() (r *UriListResponse, err error) {
-	r = &UriListResponse{}
+func (c *Client) IdentifierTypes() (r *URIListResponse, err error) {
+	r = &URIListResponse{}
 	if err = c.doRequest("/identifiers", r); err != nil {
 		return nil, fmt.Errorf("failed to get identifier types: %w", err)
 	}

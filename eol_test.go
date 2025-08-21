@@ -13,22 +13,22 @@ func TestUriJSON(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		uri      Uri
+		uri      URI
 		expected string
 	}{
 		{
 			name:     "basic uri",
-			uri:      Uri{Name: "products", URI: "https://example.com/products"},
+			uri:      URI{Name: "products", URI: "https://example.com/products"},
 			expected: `{"name":"products","uri":"https://example.com/products"}`,
 		},
 		{
 			name:     "empty uri",
-			uri:      Uri{},
+			uri:      URI{},
 			expected: `{"name":"","uri":""}`,
 		},
 		{
 			name:     "uri with special characters",
-			uri:      Uri{Name: "test-name", URI: "https://example.com/api/v1?param=value"},
+			uri:      URI{Name: "test-name", URI: "https://example.com/api/v1?param=value"},
 			expected: `{"name":"test-name","uri":"https://example.com/api/v1?param=value"}`,
 		},
 	}
@@ -48,7 +48,7 @@ func TestUriJSON(t *testing.T) {
 			}
 
 			// Test unmarshaling.
-			var unmarshaled Uri
+			var unmarshaled URI
 
 			err = json.Unmarshal(data, &unmarshaled)
 			if err != nil {
@@ -422,10 +422,10 @@ func TestProductDetailsJSON(t *testing.T) {
 func TestUriListResponseJSON(t *testing.T) {
 	t.Parallel()
 
-	response := UriListResponse{
+	response := URIListResponse{
 		SchemaVersion: "1.2.0",
 		Total:         2,
-		Result: []Uri{
+		Result: []URI{
 			{Name: "products", URI: "https://example.com/products"},
 			{Name: "categories", URI: "https://example.com/categories"},
 		},
@@ -438,7 +438,7 @@ func TestUriListResponseJSON(t *testing.T) {
 	}
 
 	// Test unmarshaling.
-	var unmarshaled UriListResponse
+	var unmarshaled URIListResponse
 
 	err = json.Unmarshal(data, &unmarshaled)
 	if err != nil {
@@ -562,7 +562,7 @@ func TestIdentifierProductJSON(t *testing.T) {
 
 	identifierProduct := IdentifierProduct{
 		Identifier: "test-identifier",
-		Product:    Uri{Name: "go", URI: "https://example.com/go"},
+		Product:    URI{Name: "go", URI: "https://example.com/go"},
 	}
 
 	// Test marshaling.
@@ -597,7 +597,7 @@ func TestIdentifierListResponseJSON(t *testing.T) {
 		Result: []IdentifierProduct{
 			{
 				Identifier: "test-id",
-				Product:    Uri{Name: "go", URI: "https://example.com/go"},
+				Product:    URI{Name: "go", URI: "https://example.com/go"},
 			},
 		},
 	}
@@ -630,7 +630,7 @@ func TestEmptyAndNilFields(t *testing.T) {
 		name string
 		data any
 	}{
-		{"empty Uri", Uri{}},
+		{"empty Uri", URI{}},
 		{"empty Identifier", Identifier{}},
 		{"empty ProductVersion", ProductVersion{}},
 		{"empty ProductRelease", ProductRelease{}},

@@ -1,12 +1,13 @@
 module tools
 
-go 1.24.6
+go 1.25.0
 
 tool (
 	github.com/alexaandru/stampli
 	github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 	github.com/nikolaydubina/go-cover-treemap
 	github.com/rhysd/actionlint/cmd/actionlint
+	github.com/wadey/gocovmerge
 	golang.org/x/tools/cmd/deadcode
 	golang.org/x/tools/cmd/godoc
 	golang.org/x/tools/cmd/goimports
@@ -198,6 +199,7 @@ require (
 	github.com/ultraware/whitespace v0.2.0 // indirect
 	github.com/uudashr/gocognit v1.2.0 // indirect
 	github.com/uudashr/iface v1.4.1 // indirect
+	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad // indirect
 	github.com/xen0n/gosmopolitan v1.3.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yagipy/maintidx v1.0.0 // indirect

@@ -72,6 +72,7 @@ Template Customization:
     default "fallback" .Field           # Default values for empty fields
     toJSON .                            # Convert to JSON format
     slice .Releases 0 5                 # Slice operations
+    eol_within "6mo" .EolFrom           # Check if EOL is within duration (mo, wk, d, h, m, s)
     exit 1                              # Exit with error code (for scripting)
 
   Quick start:

@@ -32,22 +32,22 @@ type TypeIdentifiersResponse struct {
 
 // IndexResponse represents the API index response with available endpoints.
 type IndexResponse struct {
-	*UriListResponse
+	*URIListResponse
 }
 
 // CategoriesResponse represents a response containing available categories.
 type CategoriesResponse struct {
-	*UriListResponse
+	*URIListResponse
 }
 
 // TagsResponse represents a response containing available tags.
 type TagsResponse struct {
-	*UriListResponse
+	*URIListResponse
 }
 
 // IdentifierTypesResponse represents a response containing available identifier types.
 type IdentifierTypesResponse struct {
-	*UriListResponse
+	*URIListResponse
 }
 
 // TemplateListResponse represents a response containing available templates.
@@ -241,7 +241,7 @@ func (c *Client) HandleIndex() (err error) {
 		return
 	}
 
-	c.response = &IndexResponse{UriListResponse: response}
+	c.response = &IndexResponse{URIListResponse: response}
 	c.responseHeader = ""
 
 	return
@@ -343,13 +343,13 @@ func (c *Client) HandleLatest() (err error) {
 func (c *Client) HandleCategories() (err error) {
 	args := c.config.Args
 	if len(args) == 0 {
-		var response *UriListResponse
+		var response *URIListResponse
 
 		if response, err = c.Categories(); err != nil {
 			return
 		}
 
-		c.response = &CategoriesResponse{UriListResponse: response}
+		c.response = &CategoriesResponse{URIListResponse: response}
 	} else {
 		var response *ProductListResponse
 
@@ -371,13 +371,13 @@ func (c *Client) HandleCategories() (err error) {
 func (c *Client) HandleTags() (err error) {
 	args := c.config.Args
 	if len(args) == 0 {
-		var response *UriListResponse
+		var response *URIListResponse
 
 		if response, err = c.Tags(); err != nil {
 			return
 		}
 
-		c.response = &TagsResponse{UriListResponse: response}
+		c.response = &TagsResponse{URIListResponse: response}
 	} else {
 		var response *ProductListResponse
 
@@ -399,13 +399,13 @@ func (c *Client) HandleTags() (err error) {
 func (c *Client) HandleIdentifiers() (err error) {
 	args := c.config.Args
 	if len(args) == 0 {
-		var response *UriListResponse
+		var response *URIListResponse
 
 		if response, err = c.IdentifierTypes(); err != nil {
 			return
 		}
 
-		c.response = &IdentifierTypesResponse{UriListResponse: response}
+		c.response = &IdentifierTypesResponse{URIListResponse: response}
 	} else {
 		var response *IdentifierListResponse
 
@@ -536,13 +536,13 @@ func (c *Client) executeInlineTemplate(response any) (err error) {
 func (c *Client) extractTemplateData(response any) any {
 	switch resp := response.(type) {
 	case *IndexResponse:
-		return resp.UriListResponse
+		return resp.URIListResponse
 	case *CategoriesResponse:
-		return resp.UriListResponse
+		return resp.URIListResponse
 	case *TagsResponse:
-		return resp.UriListResponse
+		return resp.URIListResponse
 	case *IdentifierTypesResponse:
-		return resp.UriListResponse
+		return resp.URIListResponse
 	case *ProductListResponse:
 		return resp
 	case *FullProductListResponse:
@@ -550,7 +550,8 @@ func (c *Client) extractTemplateData(response any) any {
 	case *ProductResponse:
 		return &resp.Result
 	case *ProductReleaseResponse:
-		return &resp.Result
+		cli := resp.Result.ToCliRelease()
+		return &cli
 	case *CategoryProductsResponse:
 		return struct {
 			*ProductListResponse
