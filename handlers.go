@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"slices"
 	"strings"
 )
 
@@ -82,11 +81,12 @@ var (
 	errOutputDirectoryRequired    = fmt.Errorf("%w: output directory is required", ErrUsage)
 	errUnknownCommand             = fmt.Errorf("%w: unknown command", ErrUsage)
 
-	// Other errors.
+	// Operational errors.
 	errUnknownResponseType           = errors.New("unknown response type")
 	errCacheClearFailed              = errors.New("failed to clear cache")
 	errFailedToExportTemplates       = errors.New("failed to export templates")
 	errFailedToExecuteInlineTemplate = errors.New("failed to execute inline template")
+	errReleaseNotFound               = errors.New("failed to find release for product")
 )
 
 //go:embed completions/bash.sh
@@ -305,18 +305,16 @@ func (c *Client) HandleRelease() (err error) {
 		return
 	}
 
-	productName := args[0]
-	cycle := args[1]
+	productName, versions := args[0], args[1:]
 
-	response, err := c.ProductRelease(productName, cycle)
-	if err != nil {
-		return
+	for _, version := range versions {
+		if c.response, err = c.ProductRelease(productName, version); err == nil {
+			c.responseHeader = "Release information:"
+			return nil
+		}
 	}
 
-	c.response = response
-	c.responseHeader = "Release information:"
-
-	return
+	return fmt.Errorf("%w %s with any of the attempted versions: %v", errReleaseNotFound, productName, versions)
 }
 
 // HandleLatest handles the latest command.
@@ -585,17 +583,12 @@ func (c *Client) normReleaseArgs(args []string) (ret []string, err error) {
 		return nil, errProductReleaseNameRequired
 	}
 
+	productName := args[0]
 	originalVersion := args[1]
-	normalizedVersion := extractMajorMinor(originalVersion)
-
-	//nolint:godox,staticcheck // ok
-	if originalVersion != normalizedVersion && isSemanticVersion(originalVersion) && c.config.IsText() {
-		// TODO: Re-enable with verbose/quiet flags - breaks clean output for templates and JSON piping
-		//    c.Printf("Note: Normalized version %s to %s for API compatibility\n\n", originalVersion, normalizedVersion)
-	}
-
-	ret = slices.Clone(args)
-	ret[1] = normalizedVersion
+	versionVariants := generateVersionVariants(originalVersion)
+	ret = make([]string, 1+len(versionVariants))
+	ret[0] = productName
+	copy(ret[1:], versionVariants)
 
 	return
 }
@@ -644,5 +637,31 @@ func (c *Client) preRouting(cmd string) string {
 		return "completion/"
 	default:
 		return cmd
+	}
+}
+
+// generateVersionVariants generates all possible version variants for a given version string
+// by progressively removing segments from the end, separated by dots.
+// For example: "1.2.3.4" -> ["1.2.3.4", "1.2.3", "1.2", "1"]
+// Returns them in order of specificity: most specific to least specific.
+func generateVersionVariants(version string) (variants []string) {
+	ver := strings.TrimSpace(version)
+	if ver == "" {
+		return
+	}
+
+	current := ver
+	variants = append(variants, current)
+
+	for {
+		lastDot := strings.LastIndex(current, ".")
+		if lastDot == -1 {
+			return
+		}
+
+		current = current[:lastDot]
+		if current != "" {
+			variants = append(variants, current)
+		}
 	}
 }

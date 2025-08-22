@@ -504,7 +504,7 @@ func (cm *CacheManager) extractReleaseFromProduct(data json.RawMessage, release 
 			continue
 		}
 
-		if name == release || name == normalizeVersion(release) {
+		if name == release {
 			releaseResponse := map[string]any{
 				"schema_version": fullProductResponse["schema_version"],
 				"result":         releaseMap,
@@ -563,7 +563,7 @@ func (cm *CacheManager) extractReleaseFromFull(data json.RawMessage, product, re
 				continue
 			}
 
-			if releaseName == release || releaseName == normalizeVersion(release) {
+			if releaseName == release {
 				releaseResponse := map[string]any{
 					"schema_version": fullResponse["schema_version"],
 					"result":         releaseMap,

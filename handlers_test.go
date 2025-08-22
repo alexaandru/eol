@@ -22,15 +22,39 @@ func TestClientNormReleaseArgs(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name:        "valid args",
-			args:        []string{"go", "1.24"},
-			expected:    []string{"go", "1.24"},
+			name:        "single number version",
+			args:        []string{"go", "1"},
+			expected:    []string{"go", "1"},
 			expectError: false,
 		},
 		{
-			name:        "semantic version normalization",
+			name:        "major.minor version",
+			args:        []string{"go", "1.24"},
+			expected:    []string{"go", "1.24", "1"},
+			expectError: false,
+		},
+		{
+			name:        "semantic version variants",
+			args:        []string{"go", "1.24.6"},
+			expected:    []string{"go", "1.24.6", "1.24", "1"},
+			expectError: false,
+		},
+		{
+			name:        "semantic version with zero patch",
 			args:        []string{"go", "1.24.0"},
-			expected:    []string{"go", "1.24"},
+			expected:    []string{"go", "1.24.0", "1.24", "1"},
+			expectError: false,
+		},
+		{
+			name:        "semantic version with prerelease",
+			args:        []string{"gradle", "8.5.0-rc1"},
+			expected:    []string{"gradle", "8.5.0-rc1", "8.5", "8"},
+			expectError: false,
+		},
+		{
+			name:        "non-standard version format",
+			args:        []string{"product", "latest"},
+			expected:    []string{"product", "latest"},
 			expectError: false,
 		},
 		{
@@ -1781,6 +1805,144 @@ func TestClientHandleEdgeCases(t *testing.T) {
 
 			if err != nil {
 				t.Fatalf("Handle() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestGenerateVersionVariants(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    string
+		expected []string
+	}{
+		{
+			name:     "empty string",
+			input:    "",
+			expected: []string{},
+		},
+		{
+			name:     "whitespace only",
+			input:    "   ",
+			expected: []string{},
+		},
+		{
+			name:     "single number version (nodejs style)",
+			input:    "24",
+			expected: []string{"24"},
+		},
+		{
+			name:     "two-part version (go style)",
+			input:    "1.24",
+			expected: []string{"1.24", "1"},
+		},
+		{
+			name:     "three-part semantic version (controlm style)",
+			input:    "9.0.21",
+			expected: []string{"9.0.21", "9.0", "9"},
+		},
+		{
+			name:     "four-part version (amazon-neptune style)",
+			input:    "1.4.5.1",
+			expected: []string{"1.4.5.1", "1.4.5", "1.4", "1"},
+		},
+		{
+			name:     "zero-prefix version (bitcoin-core style)",
+			input:    "0.21",
+			expected: []string{"0.21", "0"},
+		},
+		{
+			name:     "zero-prefix three-part (apache-kafka style)",
+			input:    "0.11.0",
+			expected: []string{"0.11.0", "0.11", "0"},
+		},
+		{
+			name:     "year-based version (amazon-linux style)",
+			input:    "2018.03",
+			expected: []string{"2018.03", "2018"},
+		},
+		{
+			name:     "kubernetes version",
+			input:    "1.33",
+			expected: []string{"1.33", "1"},
+		},
+		{
+			name:     "python version",
+			input:    "3.13",
+			expected: []string{"3.13", "3"},
+		},
+		{
+			name:     "version with whitespace (trimmed)",
+			input:    "  1.24.6  ",
+			expected: []string{"1.24.6", "1.24", "1"},
+		},
+		{
+			name:     "android version with letter suffix",
+			input:    "4.4w",
+			expected: []string{"4.4w", "4"},
+		},
+		{
+			name:     "dotnetfx three-part",
+			input:    "4.8.1",
+			expected: []string{"4.8.1", "4.8", "4"},
+		},
+		{
+			name:     "amazon-glue version with dash",
+			input:    "1.0-python-3",
+			expected: []string{"1.0-python-3", "1"},
+		},
+		{
+			name:     "zerto version with underscore",
+			input:    "10.0_u7",
+			expected: []string{"10.0_u7", "10"},
+		},
+		{
+			name:     "google-nexus single number with letter",
+			input:    "6p",
+			expected: []string{"6p"},
+		},
+		{
+			name:     "iphone version with letters",
+			input:    "3gs",
+			expected: []string{"3gs"},
+		},
+		{
+			name:     "aws-lambda runtime version",
+			input:    "ruby3.4",
+			expected: []string{"ruby3.4", "ruby3"},
+		},
+		{
+			name:     "aws-lambda nodejs runtime",
+			input:    "nodejs22.x",
+			expected: []string{"nodejs22.x", "nodejs22"},
+		},
+		{
+			name:     "iphone version with letter suffix",
+			input:    "16e",
+			expected: []string{"16e"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := generateVersionVariants(tt.input)
+
+			if len(result) != len(tt.expected) {
+				t.Errorf("generateVersionVariants(%q) returned %d variants, expected %d\nGot: %v\nExpected: %v",
+					tt.input, len(result), len(tt.expected), result, tt.expected)
+
+				return
+			}
+
+			for i, expected := range tt.expected {
+				if result[i] != expected {
+					t.Errorf("generateVersionVariants(%q)[%d] = %q, expected %q",
+						tt.input, i, result[i], expected)
+				}
 			}
 		})
 	}

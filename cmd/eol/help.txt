@@ -5,7 +5,7 @@ Commands:
   index                           Show API endpoints
   products [--full]               List all products (use --full for detailed info)
   product <name>                  Get details for a specific product
-  release <product> <release>     Get specific release information (supports semantic versions)
+  release <product> <release>     Get specific release information (automatic version fallback)
   latest <product>                Get latest release information
   categories [category]           List categories or products in a category
   tags [tag]                      List tags or products with a tag
@@ -27,7 +27,7 @@ Examples:
   eol products
   eol product ubuntu
   eol release ubuntu 22.04
-  eol release go 1.24.6
+  eol release go 1.24.999
   eol latest ubuntu
   eol categories os
   eol tags canonical
@@ -45,6 +45,16 @@ Examples:
   eol completion zsh > ~/.zsh/completions/_eol
   eol completion >> ~/.bashrc  # Auto-detect shell
   eol release go 1.17 -t '{{if .IsEol}}{{exit 1}}{{end}}'  # Exit code 1 if EOL (scripting)
+  eol release python 3.999        # Will try 3.999 → 3 (automatic fallback)
+  eol release go 1.24.999         # Will try 1.24.999 → 1.24 → 1
+
+Version Fallback:
+  When a specific version isn't found (404), the client automatically tries shorter versions:
+    1.24.999 → 1.24 → 1
+    3.11.5 → 3.11 → 3
+    2023.12 → 2023
+  Only retries on 404 (Not Found) errors - other errors bubble up immediately
+  Cache key is based on the successful version, not the original request
 
 Caching Behavior:
   Default cache: 1 hour for all endpoints except --full

@@ -10,12 +10,11 @@ The endoflife.date API provides information about end-of-life dates and support 
 ## Features
 
 - **Complete API Coverage**: All endoflife.date API v1 endpoints
-- **Dual Usage**: Go library or command-line tool
 - **Zero Dependencies**: Uses only Go standard library
 - **Type Safety**: Full type definitions for all API responses
 - **Smart Caching**: File-based caching with configurable TTL
 - **Template System**: Customizable output formatting
-- **Semantic Versions**: Automatic normalization (1.24.6 → 1.24)
+- **Version Fallback**: Automatic fallback for versions (1.24.6 → 1.24 → 1)
 - **JSON Output**: Machine-readable output for automation
 
 ## Installation
@@ -69,12 +68,12 @@ func main() {
     }
     fmt.Printf("Ubuntu: %s\n", ubuntu.Result.Label)
 
-    // Get latest release (semantic versions supported)
-    latest, err := client.ProductLatestRelease("go")
+    // Get specific release with automatic version fallback
+    release, err := client.ProductRelease("go", "1.24.999")
     if err != nil {
         log.Fatal(err)
     }
-    fmt.Printf("Latest Go: %s\n", latest.Result.Name)
+    fmt.Printf("Go release: %s\n", release.Result.Name)  // Will try 1.24.999 → 1.24 → 1
 }
 ```
 
@@ -111,14 +110,18 @@ client.IdentifiersByType("cpe")             // Identifiers by type
 client.Index()                              // API endpoints
 ```
 
-### Semantic Version Handling
+### Version Fallback
 
-The library automatically normalizes semantic versions to the format expected by the API:
+The library automatically tries version variants when a specific version isn't found:
 
 ```go
-// These are equivalent - patch versions are stripped
-release1, _ := client.ProductRelease("go", "1.24.6")  // → "1.24"
-release2, _ := client.ProductRelease("go", "1.24")    // → "1.24"
+// If 1.24.999 doesn't exist, it will try 1.24, then 1
+release, err := client.ProductRelease("go", "1.24.999")
+
+// If 3.11.5 doesn't exist, it will try 3.11, then 3
+release, err := client.ProductRelease("python", "3.11.5")
+
+// Only retries on 404 (Not Found) errors - other errors bubble up immediately
 ```
 
 ## CLI Usage
@@ -136,7 +139,7 @@ eol products --full              # Detailed info (cached 24h)
 # Product information
 eol product ubuntu
 eol release ubuntu 22.04
-eol release go 1.24.6            # Auto-normalized to 1.24
+eol release go 1.24.999          # Will try 1.24.999 → 1.24 → 1
 eol latest ubuntu
 
 # Browse by category/tag
@@ -175,8 +178,8 @@ The `exit` template function enables conditional exit codes for shell scripting:
 eol release go 1.17 -t '{{if .IsEol}}{{exit 1}}{{end}}'
 echo $?  # Will be 1 if EOL, 0 if maintained
 
-# Advanced example: Check maintenance status and exit accordingly
-eol latest terraform -t '{{if not .IsMaintained}}{{exit 2}}{{else if .IsEol}}{{exit 1}}{{end}}'
+# Version fallback in action - tries 1.999 → 1 and checks if EOL
+eol release go 1.999 -t '{{if .IsEol}}{{exit 1}}{{end}}'
 
 # Use in shell scripts for automated checks
 if eol release ubuntu 18.04 -t '{{if .IsEol}}{{exit 1}}{{end}}' 2>/dev/null; then

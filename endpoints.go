@@ -6,6 +6,7 @@ import (
 )
 
 var (
+	errNotFound            = errors.New("not found")
 	errProductNameEmpty    = errors.New("product name cannot be empty")
 	errReleaseNameEmpty    = errors.New("release name cannot be empty")
 	errCategoryNameEmpty   = errors.New("category name cannot be empty")
@@ -68,24 +69,21 @@ func (c *Client) ProductRelease(p, rls string) (r *ProductReleaseResponse, err e
 	}
 
 	r = &ProductReleaseResponse{}
-	nrls := normalizeVersion(rls)
 
-	err = c.doRequest("/products/"+p+"/releases/"+nrls, r, p, nrls)
-	if err != nil {
-		if nrls != rls { // If normalization was applied and it failed, try with original version.
-			if originalErr := c.doRequest("/products/"+p+"/releases/"+rls, &r, p, rls); originalErr == nil {
-				return r, nil
-			}
-
-			// Both attempts failed, provide helpful error message.
-			return nil, fmt.Errorf("failed to get release %s for product %s (also tried %s): %w",
-				rls, p, nrls, err)
+	variants := generateVersionVariants(rls)
+	for _, variant := range variants {
+		err = c.doRequest("/products/"+p+"/releases/"+variant, r, p, variant)
+		if err == nil {
+			return //nolint:nilerr // ok
 		}
 
-		return nil, fmt.Errorf("failed to get release %s for product %s: %w", rls, p, err)
+		if !errors.Is(err, errNotFound) {
+			return nil, fmt.Errorf("failed to get release %s for product %s: %w", rls, p, err)
+		}
 	}
 
-	return
+	return nil, fmt.Errorf("failed to get release %s for product %s (variants: %v): %w",
+		rls, p, variants, err)
 }
 
 // ProductLatestRelease returns information about the latest release cycle for a product.

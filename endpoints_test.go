@@ -408,11 +408,19 @@ func TestClientProductRelease(t *testing.T) {
 			var mockClient *http.Client
 
 			if tt.product != "" && tt.release != "" {
-				normalizedRelease := normalizeVersion(tt.release)
-				url := fmt.Sprintf("%s/products/%s/releases/%s", DefaultBaseURL, tt.product, normalizedRelease)
-				mockClient = newMockClient(map[string]*mockResponse{
-					url: {Code: tt.statusCode, Body: tt.mockResponse},
-				})
+				variants := generateVersionVariants(tt.release)
+				responses := make(map[string]*mockResponse)
+
+				for i, variant := range variants {
+					url := fmt.Sprintf("%s/products/%s/releases/%s", DefaultBaseURL, tt.product, variant)
+					if i == 0 {
+						responses[url] = &mockResponse{Code: tt.statusCode, Body: tt.mockResponse}
+					} else {
+						responses[url] = &mockResponse{Code: 404, Body: "Not Found"}
+					}
+				}
+
+				mockClient = newMockClient(responses)
 			} else {
 				mockClient = newMockClient(map[string]*mockResponse{})
 			}

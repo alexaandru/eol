@@ -192,6 +192,10 @@ func (c *Client) doRequest(endpoint string, result any, params ...string) (err e
 	defer resp.Body.Close() //nolint:errcheck // ok
 
 	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusNotFound {
+			return errNotFound
+		}
+
 		return fmt.Errorf("%s (%d)", http.StatusText(resp.StatusCode), resp.StatusCode) //nolint:err113 // ok
 	}
 
