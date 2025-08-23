@@ -1,5 +1,5 @@
-API Endpoints - {{.Total}} total:
+API Endpoints ({{len .}}):
 
-{{- range .Result}}
-{{.Name}}    {{.URI}}
+{{- range .}}
+{{printf "%-12s %s" .name .uri}}
 {{- end}}

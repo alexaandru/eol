@@ -1,0 +1,9 @@
+Product Name: go
+Release Name: 1.24
+Label: 1.24
+Release Date: 2025-02-11
+Is LTS: false
+Is EOL: false
+Is Maintained: true
+Latest Version: 1.24.6 (released: 2025-08-06)
+  Link: https://go.dev/doc/devel/release#go1.24.minor

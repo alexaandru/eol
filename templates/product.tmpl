@@ -1,0 +1,48 @@
+{{- $labelColor := "\033[1m\033[38;2;160;32;240m" -}}
+{{- $releaseNameColor := "\033[1m\033[38;2;138;43;226m" -}}
+{{- $colorReset := "\033[0m" -}}
+{{$labelColor}}Name:{{$colorReset}} {{.name}}
+{{$labelColor}}Label:{{$colorReset}} {{.label}}
+{{$labelColor}}Category:{{$colorReset}} {{.category}}
+{{- if .aliases}}
+{{$labelColor}}Aliases:{{$colorReset}} {{join (toStringSlice .aliases) ", "}}
+{{- end}}
+{{$labelColor}}Tags:{{$colorReset}} {{join (toStringSlice .tags) ", "}}
+{{- if .versionCommand}}
+{{$labelColor}}Version Command:{{$colorReset}} {{.versionCommand}}
+{{- end}}
+{{- if .identifiers}}
+{{$labelColor}}Identifiers:{{$colorReset}}
+{{- range .identifiers}}
+  {{.type}}: {{.id}}
+{{- end}}
+{{- end}}
+{{$labelColor}}Links:{{$colorReset}}
+  {{$labelColor}}HTML:{{$colorReset}} {{.links.html}}
+{{- if .links.icon}}
+  {{$labelColor}}Icon:{{$colorReset}} {{.links.icon}}
+{{- end}}
+{{- if .links.releasePolicy}}
+  {{$labelColor}}Release Policy:{{$colorReset}} {{.links.releasePolicy}}
+{{- end}}
+{{$labelColor}}Labels:{{$colorReset}}
+  {{$labelColor}}EOL:{{$colorReset}} {{.labels.eol}}
+{{- if .labels.eoas}}
+  {{$labelColor}}EOAS:{{$colorReset}} {{.labels.eoas}}
+{{- end}}
+{{- if .labels.discontinued}}
+  {{$labelColor}}Discontinued:{{$colorReset}} {{.labels.discontinued}}
+{{- end}}
+{{- if .releases}}
+
+{{$labelColor}}Releases 🚀:{{$colorReset}} ({{len .releases}}):
+{{- range .releases}}
+  {{$releaseColor := ""}}
+  {{- if .isEol -}}{{$releaseColor = "\033[9m\033[38;2;255;69;58m"}}
+  {{- else if .isEoas -}}{{$releaseColor = "\033[38;2;255;140;0m"}}
+  {{- else if .isMaintained -}}{{$releaseColor = "\033[38;2;0;255;127m"}}
+  {{- else -}}{{$releaseColor = "\033[38;2;255;20;147m"}}
+  {{- end -}}
+  {{$releaseColor}}{{.name}}{{$colorReset}} ({{$releaseNameColor}}{{.label}}{{$colorReset}}) - {{$labelColor}}Released:{{$colorReset}} {{.releaseDate}} - {{$labelColor}}EOL:{{$colorReset}} {{if .eolFrom}}{{.eolFrom}}{{else}}unknown{{end}} - {{$labelColor}}LTS:{{$colorReset}} {{.isLts}} - {{$labelColor}}Maintained:{{$colorReset}} {{.isMaintained}}{{$colorReset}}
+{{- end}}
+{{- end}}

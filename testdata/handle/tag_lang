@@ -1,0 +1,32 @@
+Matching products (30):
+alibaba-dragonwell    Alibaba Dragonwell    lang    alibaba, java-distribution, lang
+amazon-corretto    Amazon Corretto    lang    amazon, java-distribution, lang
+apache-groovy    Apache Groovy    lang    apache, java-runtime, lang
+azul-zulu    Azul Zulu    lang    azul, java-distribution, lang
+bellsoft-liberica    Bellsoft Liberica JDK    lang    bellsoft, java-distribution, lang
+eclipse-temurin    Eclipse Temurin    lang    eclipse, java-distribution, lang
+elixir    Elixir    lang    lang
+erlang    Erlang    lang    lang
+ghc    Glasgow Haskell Compiler (GHC)    lang    lang
+go    Go    lang    google, lang
+graalvm-ce    GraalVM Community Edition    lang    java-distribution, lang, oracle
+ibm-semeru-runtime    IBM Semeru Runtime    lang    ibm, java-distribution, lang
+julia    Julia    lang    lang
+kotlin    Kotlin    lang    jetbrains, lang
+lua    Lua    lang    lang
+mandrel    Mandrel    lang    java-distribution, lang, red-hat
+microsoft-build-of-openjdk    Microsoft Build of OpenJDK    lang    java-distribution, lang, microsoft
+openjdk-builds-from-oracle    OpenJDK builds from Oracle    lang    java-distribution, lang, oracle
+oracle-graalvm    Oracle GraalVM    lang    java-distribution, lang, oracle
+oracle-jdk    Oracle JDK    lang    java-distribution, lang, oracle
+perl    Perl    lang    lang
+php    PHP    lang    lang
+powershell    Microsoft PowerShell    lang    lang, microsoft
+python    Python    lang    lang
+redhat-build-of-openjdk    Red Hat build of OpenJDK    lang    java-distribution, lang, red-hat
+ruby    Ruby    lang    lang
+rust    Rust    lang    lang, rust-foundation
+sapmachine    SapMachine    lang    java-distribution, lang, sap
+scala    Scala    lang    java-runtime, lang
+visual-cobol    Visual COBOL    lang    lang
+

@@ -1,23 +1,12 @@
-all: fmt lint actionlint vulncheck deadcode shellcheck test integration-coverage
-
-build:
-	go build -o eol ./cmd
-
-install:
-	@go install ./cmd/eol
+all: fmt lint actionlint vulncheck deadcode shellcheck test
 
 test:
 	@go test -vet all -coverprofile=unit.cov -covermode=atomic -race -count=5 $(OPTS) ./...
 	@go tool cover -func=unit.cov|tail -n1
 	@go tool -modfile=tools/go.mod stampli -quiet -coverage=$$(go tool cover -func=unit.cov|tail -n1|tr -s "\t"|cut -f3|tr -d "%")
-
-integration-coverage:
-	@echo "Running integration tests with coverage..."
-	@./test_inline_templates.sh
+	@go build . && ./eol release-badge go $$(grep ^go go.mod|awk '{print $$2}') > go-badge.svg
 
 unit.cov: test
-
-integration.cov: integration-coverage
 
 lint:
 	@go run golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@latest -test ./...

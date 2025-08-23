@@ -1,0 +1,5 @@
+{{.Header}} ({{.Total}}):
+
+{{- range .Result}}
+{{index . "name"}}    {{index . "label"}}{{if index . "category"}}    {{index . "category"}}{{end}}{{if index . "tags"}}    {{range $i, $tag := index . "tags"}}{{if $i}}, {{end}}{{$tag}}{{end}}{{end}}
+{{- end}}

@@ -1,0 +1,12 @@
+Product Name: ubuntu
+Release Name: 22.04
+Label: 22.04 'Jammy Jellyfish' (LTS) (Codename: Jammy Jellyfish)
+Release Date: 2022-04-21
+Is LTS: true
+Is EOL: false
+EOL From: 2027-04-01
+Is Maintained: true
+Is EOAS: true
+EOAS From: 2024-09-30
+Latest Version: 22.04.5 (released: 2024-09-12)
+  Link: https://wiki.ubuntu.com/JammyJellyfish/ReleaseNotes/

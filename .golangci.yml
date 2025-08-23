@@ -2,13 +2,9 @@ version: "2"
 linters:
   default: all
   disable:
-    - embeddedstructfieldcheck
     - exhaustruct
     - noinlineerr
     - nonamedreturns
-    - tagliatelle
-    - testpackage
-    - wrapcheck
     - wsl # deprecated
   settings:
     cyclop:
@@ -172,13 +168,14 @@ linters:
         - i int
         - j int
         - t testing.T
+        - t *template.Template
         - b testing.B
         - T any
         - f *os.File
-        - c Client
-        - c Config
-        - c *Client
-        - c *Config
+        - c client
+        - c *client
+        - r *http.Request
+        - w *http.Response
     wsl:
       strict-append: true
       allow-assign-and-call: true
@@ -192,14 +189,9 @@ linters:
     warn-unused: true
     generated: strict
     rules:
-      - linters: [errcheck]
-        text: Error return value of `c.Print
       - linters: [forbidigo]
         text: Use t.Context
         path-except: _test\.go
-      - linters: [gosec]
-        text: G104
-        source: c.Print
       - linters:
           - bodyclose
           - cyclop

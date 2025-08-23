@@ -1,206 +1,451 @@
-package eol
+package main
 
 import (
+	"bytes"
+	"cmp"
+	"context"
+	_ "embed"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"io/fs"
+	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
+	"regexp"
+	"runtime/debug"
+	"slices"
+	"strings"
+	"text/template"
 	"time"
+
+	"github.com/alexaandru/eol/templates"
 )
 
-// URI represents a link to a resource.
-type URI struct {
-	Name string `json:"name"`
-	URI  string `json:"uri"`
+type client struct {
+	sink           io.Writer
+	response       []byte
+	baseURL        *url.URL
+	httpClient     //nolint:embeddedstructfieldcheck // nope
+	templates      *template.Template
+	command        string
+	templatesDir   string
+	inlineTemplate string
+	args           []string
+	format         outputFormat
 }
 
-// Identifier represents a product identifier (purl, cpe, etc.)
-type Identifier struct {
-	ID   string `json:"id"`
-	Type string `json:"type"`
+type httpClient interface {
+	Do(req *http.Request) (*http.Response, error)
 }
 
-// ProductVersion contains information about a specific product version.
-type ProductVersion struct {
-	Date *string `json:"date"`
-	Link *string `json:"link"`
-	Name string  `json:"name"`
+type outputFormat int
+
+// Default values.
+const (
+	DefaultTimeout = 30 * time.Second
+	UserAgent      = "eol-go-client/1.0.0"
+	DefaultBaseURL = "https://endoflife.date/api/v1"
+)
+
+// Supported output formats.
+const (
+	FormatText outputFormat = iota
+	FormatJSON
+)
+
+//nolint:gochecknoglobals // ok
+var funcMap = template.FuncMap{
+	"join": strings.Join, "toJSON": toJSON, "eolWithin": eolWithin, "dict": dict,
+	"exit": func(code int) string { os.Exit(code); return "" }, "toStringSlice": toStringSlice,
+	"add": func(a, b int) int { return a + b }, "mul": func(a, b int) int { return a * b },
+	"collect": collect,
 }
 
-// ProductRelease contains full information about a product release cycle.
-type ProductRelease struct {
-	EolFrom          *string         `json:"eolFrom"`
-	IsDiscontinued   *bool           `json:"isDiscontinued,omitempty"`
-	EoesFrom         *string         `json:"eoesFrom,omitempty"`
-	EoasFrom         *string         `json:"eoasFrom,omitempty"`
-	DiscontinuedFrom *string         `json:"discontinuedFrom,omitempty"`
-	LtsFrom          *string         `json:"ltsFrom"`
-	Custom           map[string]any  `json:"custom,omitempty"`
-	IsEoes           *bool           `json:"isEoes,omitempty"`
-	Codename         *string         `json:"codename"`
-	Latest           *ProductVersion `json:"latest"`
-	IsEoas           *bool           `json:"isEoas,omitempty"`
-	Name             string          `json:"name"`
-	ReleaseDate      string          `json:"releaseDate"`
-	Label            string          `json:"label"`
-	IsLts            bool            `json:"isLts"`
-	IsMaintained     bool            `json:"isMaintained"`
-	IsEol            bool            `json:"isEol"`
+//nolint:gochecknoglobals // ok
+var (
+	rawOutput   = []string{"help", "version", "completion", "completion-bash", "completion-zsh", "templates-export"}
+	reCustomDur = regexp.MustCompile(`^(\d+)(d|wk|mo)$`)
+)
+
+// All possible errors.
+var (
+	ErrNeedHelp = errors.New("help requested")
+	ErrUsage    = errors.New("usage error")
+	errNotFound = errors.New("not found")
+
+	// Usage errors.
+	errUnknownCommand    = fmt.Errorf("%w: unknown command", ErrUsage)
+	errUnsupportedFormat = fmt.Errorf("%w: unsupported format", ErrUsage)
+
+	// Operational errors.
+	errReleaseNotFound = errors.New("failed to find release for product")
+	errInlineTemplate  = errors.New("inline template seems wrong, did you indend to use -f json?")
+	errInvalidDuration = errors.New("invalid duration")
+	errInvalidDict     = errors.New("invalid dict")
+)
+
+//go:embed completions/bash.sh
+var bashCompletionScript string
+
+//go:embed completions/zsh.sh
+var zshCompletionScript string
+
+// New creates a new endoflife.date API client with default settings.
+func New(args []string) (c *client, err error) {
+	baseURL, err := url.Parse(DefaultBaseURL)
+	if err != nil {
+		return
+	}
+
+	c = &client{
+		sink:    os.Stdout,
+		baseURL: baseURL,
+		format:  FormatText,
+	}
+
+	if err = c.parseFlags(args); err != nil {
+		return
+	}
+
+	if c.httpClient == nil {
+		c.httpClient = &http.Client{Timeout: DefaultTimeout}
+	}
+
+	if c.templates == nil { //nolint:nestif // ok
+		c.templates = template.New("master").Funcs(funcMap)
+
+		if err = loadTemplates(c.templates, templates.Templates); err != nil {
+			return
+		}
+
+		if x := c.templatesDir; x != "" && c.command != "templates-export" {
+			if err = loadTemplates(c.templates, os.DirFS(x).(fs.ReadDirFS)); err != nil { //nolint:errcheck,forcetypeassert // ok
+				return
+			}
+		}
+
+		if x := c.inlineTemplate; x != "" {
+			_, err = c.templates.Parse(fmt.Sprintf(`{{define "_inline"}}%s{{end}}`, x))
+		}
+	}
+
+	return
 }
 
-// CliProductRelease is a CLI-friendly version of ProductRelease with regular bool fields.
+// Handle represents the main entry point for handling commands.
 //
-//nolint:govet // ok
-type CliProductRelease struct {
-	Name             string          `json:"name"`
-	Label            string          `json:"label"`
-	ReleaseDate      string          `json:"releaseDate"`
-	IsLts            bool            `json:"isLts"`
-	IsEol            bool            `json:"isEol"`
-	IsMaintained     bool            `json:"isMaintained"`
-	IsEoas           bool            `json:"isEoas"`
-	IsDiscontinued   bool            `json:"isDiscontinued"`
-	IsEoes           bool            `json:"isEoes"`
-	EolFrom          string          `json:"eolFrom"`
-	LtsFrom          string          `json:"ltsFrom"`
-	EoasFrom         string          `json:"eoasFrom"`
-	EoesFrom         string          `json:"eoesFrom"`
-	DiscontinuedFrom string          `json:"discontinuedFrom"`
-	Codename         string          `json:"codename"`
-	Latest           *ProductVersion `json:"latest"`
-	Custom           map[string]any  `json:"custom,omitempty"`
-}
+//nolint:gocyclo,cyclop,funlen // ok
+func (c *client) Handle() (err error) {
+	c.response = nil
+	cmd := c.command
 
-// ProductSummary contains basic information about a product.
-type ProductSummary struct {
-	Name     string   `json:"name"`
-	Label    string   `json:"label"`
-	Category string   `json:"category"`
-	URI      string   `json:"uri"`
-	Aliases  []string `json:"aliases"`
-	Tags     []string `json:"tags"`
-}
+	switch cmd {
+	case "help":
+		c.printHelp()
+	case "version":
+		c.printVersion()
+	case "index":
+		err = c.doRequest("/")
+	case "products":
+		err = c.doRequest("/products")
+	case "products-full":
+		err = c.doRequest("/products/full")
+	case "product":
+		err = c.doRequest("/products/" + c.args[0])
+	case "release", "release-badge":
+		pn, rel := c.args[0], c.args[1]
+		versions, found := generateVersionVariants(rel), false
 
-// ProductLabels contains the labels used for different phases.
-type ProductLabels struct {
-	Eoas         *string `json:"eoas"`
-	Discontinued *string `json:"discontinued"`
-	Eoes         *string `json:"eoes"`
-	Eol          string  `json:"eol"`
-}
+		for _, version := range versions {
+			err = c.doRequest("/products/" + pn + "/releases/" + version)
+			if err == nil {
+				found = true
+				break
+			}
+		}
 
-// ProductLinks contains various links related to the product.
-type ProductLinks struct {
-	Icon          *string `json:"icon"`
-	ReleasePolicy *string `json:"releasePolicy"`
-	HTML          string  `json:"html"`
-}
-
-// ProductDetails contains full details about a product.
-type ProductDetails struct {
-	Name           string           `json:"name"`
-	Label          string           `json:"label"`
-	Aliases        []string         `json:"aliases"`
-	Category       string           `json:"category"`
-	Tags           []string         `json:"tags"`
-	VersionCommand *string          `json:"versionCommand"`
-	Identifiers    []Identifier     `json:"identifiers"`
-	Labels         ProductLabels    `json:"labels"`
-	Links          ProductLinks     `json:"links"`
-	Releases       []ProductRelease `json:"releases"`
-}
-
-// URIListResponse represents a response containing a list of URIs.
-type URIListResponse struct {
-	SchemaVersion string `json:"schema_version"`
-	Result        []URI  `json:"result"`
-	Total         int    `json:"total"`
-}
-
-// ProductListResponse represents a response containing a list of product summaries.
-type ProductListResponse struct {
-	SchemaVersion string           `json:"schema_version"`
-	Result        []ProductSummary `json:"result"`
-	Total         int              `json:"total"`
-}
-
-// FullProductListResponse represents a response containing a list of full product details.
-type FullProductListResponse struct {
-	SchemaVersion string           `json:"schema_version"`
-	Result        []ProductDetails `json:"result"`
-	Total         int              `json:"total"`
-}
-
-// ProductResponse represents a response containing a single product.
-type ProductResponse struct {
-	SchemaVersion string         `json:"schema_version"`
-	LastModified  time.Time      `json:"last_modified"`
-	Result        ProductDetails `json:"result"`
-}
-
-// ProductReleaseResponse represents a response containing a single release cycle.
-type ProductReleaseResponse struct {
-	SchemaVersion string         `json:"schema_version"`
-	Result        ProductRelease `json:"result"`
-}
-
-// IdentifierProduct represents the product reference in an identifier response.
-type IdentifierProduct struct {
-	Identifier string `json:"identifier"`
-	Product    URI    `json:"product"`
-}
-
-// IdentifierListResponse represents a response containing identifiers for a given type.
-type IdentifierListResponse struct {
-	SchemaVersion string              `json:"schema_version"`
-	Result        []IdentifierProduct `json:"result"`
-	Total         int                 `json:"total"`
-}
-
-// ToCliRelease converts a ProductRelease to a CliProductRelease with clean bool fields.
-func (pr *ProductRelease) ToCliRelease() (cli CliProductRelease) {
-	cli = CliProductRelease{
-		Name:         pr.Name,
-		Label:        pr.Label,
-		ReleaseDate:  pr.ReleaseDate,
-		IsLts:        pr.IsLts,
-		IsEol:        pr.IsEol,
-		IsMaintained: pr.IsMaintained,
-		Latest:       pr.Latest,
-		Custom:       pr.Custom,
+		if !found {
+			err = fmt.Errorf("%w %s with any of the attempted versions: %v",
+				errReleaseNotFound, pn, versions)
+		}
+	case "latest":
+		c.command = "release"
+		err = c.doRequest("/products/" + c.args[0] + "/releases/latest")
+	case "categories":
+		err = c.doRequest("/categories")
+	case "category":
+		err = c.doRequest("/categories/" + c.args[0])
+	case "tags":
+		err = c.doRequest("/tags")
+	case "tag":
+		err = c.doRequest("/tags/" + c.args[0])
+	case "identifiers":
+		err = c.doRequest("/identifiers")
+	case "identifier":
+		err = c.doRequest("/identifiers/" + c.args[0])
+	case "templates-export":
+		err = c.templatesExport(c.templatesDir)
+	case "completion-bash":
+		c.response = []byte(bashCompletionScript)
+	case "completion-zsh":
+		c.response = []byte(zshCompletionScript)
+	default:
+		err = fmt.Errorf("%w: %s", errUnknownCommand, c.command)
 	}
 
-	if pr.EolFrom != nil {
-		cli.EolFrom = *pr.EolFrom
+	if err != nil || c.response == nil {
+		return
 	}
 
-	if pr.LtsFrom != nil {
-		cli.LtsFrom = *pr.LtsFrom
+	if c.format == FormatJSON || slices.Contains(rawOutput, c.command) {
+		_, err = c.sink.Write(c.response)
+	} else {
+		err = c.executeTemplate(c.command)
 	}
 
-	if pr.EoasFrom != nil {
-		cli.EoasFrom = *pr.EoasFrom
+	return
+}
+
+func (c *client) printHelp() {
+	c.printHeader()
+	c.sink.Write([]byte("\n\n")) //nolint:errcheck,gosec // ok
+	c.printUsage()
+}
+
+//nolint:errcheck,gosec // ok
+func (c *client) printHeader() { c.sink.Write([]byte("eol - EndOfLife.date API client")) }
+
+//nolint:errcheck,gosec // ok
+func (c *client) printUsage() { c.sink.Write([]byte(helpText)) }
+
+func (c *client) printVersion() {
+	v := "unknown"
+	if info, ok := debug.ReadBuildInfo(); ok {
+		v = info.Main.Version
 	}
 
-	if pr.EoesFrom != nil {
-		cli.EoesFrom = *pr.EoesFrom
+	c.printHeader()
+	c.sink.Write([]byte(" " + v + "\n")) //nolint:errcheck,gosec // ok
+}
+
+//nolint:gocognit,gocyclo,cyclop,funlen,nakedret // ok
+func (c *client) parseFlags(args []string) (err error) {
+	if len(args) == 0 {
+		return fmt.Errorf("%w: requires a command", ErrUsage)
 	}
 
-	if pr.DiscontinuedFrom != nil {
-		cli.DiscontinuedFrom = *pr.DiscontinuedFrom
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch arg {
+		case "-f", "--format":
+			if i+1 >= len(args) {
+				return fmt.Errorf("%w: -f/--format requires a value", ErrUsage)
+			}
+
+			i++
+
+			format := args[i]
+			switch format {
+			case "json":
+				c.format = FormatJSON
+			case "text":
+				c.format = FormatText
+			default:
+				return fmt.Errorf("%w '%s'", errUnsupportedFormat, format)
+			}
+		case "--templates-dir":
+			if i+1 >= len(args) {
+				return fmt.Errorf("%w: --templates-dir requires a directory path", ErrUsage)
+			}
+
+			c.templatesDir = args[i+1]
+			i++ // Skip the directory argument.
+		case "-t", "--template":
+			if i+1 >= len(args) {
+				return fmt.Errorf("%w: --template requires a template string", ErrUsage)
+			}
+
+			c.inlineTemplate = args[i+1]
+			if c.inlineTemplate == "json" {
+				return errInlineTemplate
+			}
+
+			i++ // Skip the template argument.
+		case "-h", "--help", "help":
+			c.command = "help"
+		default:
+			if c.command == "" && !strings.HasPrefix(arg, "-") {
+				c.command = arg
+			} else {
+				c.args = append(c.args, arg)
+			}
+		}
 	}
 
-	if pr.Codename != nil {
-		cli.Codename = *pr.Codename
+	if c.command == "" {
+		return fmt.Errorf("%w: requires a command", ErrUsage)
 	}
 
-	if pr.IsEoas != nil {
-		cli.IsEoas = *pr.IsEoas
+	switch c.command {
+	case "completion":
+		if shell := os.Getenv("SHELL"); strings.Contains(shell, "zsh") {
+			c.command = "completion-zsh"
+		} else {
+			c.command = "completion-bash"
+		}
+	case "product", "category", "tag", "identifier", "latest":
+		if len(c.args) < 1 || c.args[0] == "" {
+			return fmt.Errorf("%w: %s command requires an argument", ErrUsage, c.command)
+		}
+	case "release", "release-badge":
+		if len(c.args) < 2 || c.args[0] == "" || c.args[1] == "" {
+			return fmt.Errorf("%w: %s command requires two arguments", ErrUsage, c.command)
+		}
 	}
 
-	if pr.IsDiscontinued != nil {
-		cli.IsDiscontinued = *pr.IsDiscontinued
+	return
+}
+
+// Executes a template using the prepared templates.
+// Inline template is executed via "_inline" name.
+func (c *client) executeTemplate(name string) (err error) {
+	if c.inlineTemplate != "" {
+		name = "_inline"
 	}
 
-	if pr.IsEoes != nil {
-		cli.IsEoes = *pr.IsEoes
+	tmpl := c.templates.Lookup(name)
+	if tmpl == nil {
+		return fmt.Errorf("template %s %w", name, errNotFound)
 	}
+
+	x := map[string]any{}
+	if err = json.Unmarshal(c.response, &x); err != nil {
+		return
+	}
+
+	//nolint:wrapcheck // ok
+	switch v := x["result"].(type) {
+	case []any:
+		return tmpl.Execute(c.sink, v)
+	case map[string]any:
+		for i, x := range c.args {
+			v[fmt.Sprintf("arg%d", i+1)] = x
+		}
+
+		return tmpl.Execute(c.sink, v)
+	default:
+		return tmpl.Execute(c.sink, v)
+	}
+}
+
+func loadTemplates(t *template.Template, src fs.ReadDirFS) (err error) {
+	entries, err := src.ReadDir(".")
+	if err != nil {
+		return
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".tmpl") {
+			continue
+		}
+
+		var (
+			f       fs.File
+			content []byte
+		)
+
+		if f, err = src.Open(entry.Name()); err != nil {
+			return
+		}
+
+		if content, err = io.ReadAll(f); err != nil {
+			return
+		}
+
+		name := strings.TrimSuffix(entry.Name(), ".tmpl")
+		if !bytes.HasPrefix(content, []byte("{{define")) &&
+			!bytes.HasPrefix(content, []byte("{{ define")) &&
+			!bytes.HasPrefix(content, []byte("{{- define")) {
+			content = fmt.Appendf(nil, `{{define "%s"}}%s{{end}}`, name, content)
+		}
+
+		if _, err = t.Parse(string(content)); err != nil {
+			return
+		}
+	}
+
+	return
+}
+
+func (c *client) templatesExport(dir string) (err error) {
+	dir = cmp.Or(dir, configDir("templates"))
+	if err = os.MkdirAll(dir, 0o750); err != nil { //nolint:mnd // ok
+		return
+	}
+
+	entries, err := templates.Templates.ReadDir(".")
+	if err != nil {
+		return
+	}
+
+	for _, entry := range entries {
+		dst := filepath.Join(dir, entry.Name())
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".tmpl") {
+			continue
+		}
+
+		var (
+			f       fs.File
+			content []byte
+		)
+
+		if f, err = templates.Templates.Open(entry.Name()); err != nil {
+			return
+		}
+
+		if content, err = io.ReadAll(f); err != nil {
+			return
+		}
+
+		if err = os.WriteFile(dst, content, 0o640); err != nil { //nolint:mnd // ok
+			return
+		}
+	}
+
+	c.response = fmt.Appendf(nil, "Templates exported to %s", dir)
+
+	return
+}
+
+func (c *client) doRequest(endpoint string) (err error) {
+	urL := buildURL(*c.baseURL, endpoint)
+
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, urL, http.NoBody)
+	if err != nil {
+		return
+	}
+
+	req.Header.Set("User-Agent", UserAgent)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close() //nolint:errcheck // ok
+
+	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusNotFound {
+			return errNotFound
+		}
+
+		return fmt.Errorf("%s (%d)", http.StatusText(resp.StatusCode), resp.StatusCode) //nolint:err113 // ok
+	}
+
+	c.response, err = io.ReadAll(resp.Body)
 
 	return
 }

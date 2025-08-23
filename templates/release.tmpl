@@ -1,0 +1,35 @@
+Product Name: {{.arg1}}
+Release Name: {{.name}}
+Label: {{.label}}{{- if .codename}} (Codename: {{.codename}}){{- end}}
+Release Date: {{.releaseDate}}
+Is LTS: {{.isLts}}
+{{- if .ltsFrom}}
+LTS From: {{.ltsFrom}}
+{{- end}}
+Is EOL: {{.isEol}}
+{{- if .eolFrom}}
+EOL From: {{.eolFrom}}
+{{- end}}
+Is Maintained: {{.isMaintained}}
+{{- if .isEoas}}
+Is EOAS: {{.isEoas}}
+{{- end}}
+{{- if .eoasFrom}}
+EOAS From: {{.eoasFrom}}
+{{- end}}
+{{- if .isDiscontinued}}
+Is Discontinued: {{.isDiscontinued}}
+{{- end}}
+{{- if .discontinuedFrom}}
+Discontinued From: {{.discontinuedFrom}}
+{{- end}}
+{{- if .latest}}
+Latest Version: {{.latest.name}}{{if .latest.date}} (released: {{.latest.date}}){{end}}
+{{- if .latest.link}}
+  Link: {{.latest.link}}
+{{- end}}
+{{- end}}
+{{- if .custom}}
+Custom Fields:
+  {{toJSON .custom}}
+{{- end}}

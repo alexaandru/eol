@@ -1,0 +1,1 @@
+{"schema_version":"1.2.0","generated_at":"2025-08-27T13:14:55+00:00","total":3,"result":[{"name":"cpe","uri":"https://endoflife.date/api/v1/identifiers/cpe/"},{"name":"repology","uri":"https://endoflife.date/api/v1/identifiers/repology/"},{"name":"purl","uri":"https://endoflife.date/api/v1/identifiers/purl/"}]}

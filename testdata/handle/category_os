@@ -1,0 +1,64 @@
+Matching products (62):
+almalinux    AlmaLinux OS    os    linux-distribution, os
+alpine-linux    Alpine Linux    os    linux-distribution, os
+amazon-linux    Amazon Linux    os    amazon, linux-distribution, os
+android    Android OS    os    google, os
+antix    antiX Linux    os    linux-distribution, os
+tvos    Apple tvOS    os    apple, os
+big-ip    BIG-IP    os    os
+centos-stream    CentOS Stream    os    linux-distribution, os
+centos    CentOS    os    discontinued, linux-distribution, os
+clear-linux    Clear Linux    os    discontinued, intel, linux-distribution, os
+cos    Google Container-Optimized OS (COS)    os    google, os
+debian    Debian    os    linux-distribution, os
+devuan    Devuan    os    linux-distribution, os
+eurolinux    EuroLinux    os    discontinued, linux-distribution, os
+fedora    Fedora Linux    os    linux-distribution, os
+fortios    FortiOS    os    fortinet, os
+freebsd    FreeBSD    os    bsd-distribution, os, unix-distribution
+ibm-aix    IBM AIX    os    ibm, os, unix-distribution
+ibm-i    IBM iSeries    os    ibm, os, unix-distribution
+ios    Apple iOS    os    apple, os
+ipados    Apple iPadOS    os    apple, os
+kde-plasma    KDE Plasma    os    os
+lineageos    LineageOS    os    os
+linux    Linux Kernel    os    os
+linuxmint    Linux Mint    os    linux-distribution, os
+macos    Apple macOS    os    apple, os
+mageia    Mageia    os    linux-distribution, os
+mxlinux    MX Linux    os    linux-distribution, os
+netapp-ontap    NetApp ONTAP    os    netapp, os
+netbackup-appliance-os    NetBackup Appliance OS    os    os, veritas
+netbsd    NetBSD    os    bsd-distribution, os, unix-distribution
+nixos    NixOS    os    linux-distribution, os
+nutanix-aos    Nutanix AOS    os    nutanix, os
+openbsd    OpenBSD    os    bsd-distribution, os, unix-distribution
+opensuse    openSUSE    os    linux-distribution, os
+openwrt    OpenWrt    os    linux-distribution, os
+oracle-linux    Oracle Linux    os    linux-distribution, oracle, os
+oracle-solaris    Oracle Solaris    os    oracle, os, unix-distribution
+panos    Palo Alto Networks PAN-OS    os    os, palo-alto-networks
+pop-os    Pop!_OS    os    linux-distribution, os
+postmarketos    postmarketOS    os    linux-distribution, os
+proxmox-ve    Proxmox VE    os    os
+rhel    Red Hat Enterprise Linux    os    linux-distribution, os, red-hat
+rocky-linux    Rocky Linux    os    linux-distribution, os
+slackware    Slackware Linux    os    linux-distribution, os
+sles    SUSE Linux Enterprise Server    os    linux-distribution, os, suse
+sns-firmware    Stormshield firmware    os    os, stormshield
+steamos    SteamOS    os    linux-distribution, os
+tails    Tails    os    linux-distribution, os
+ubuntu    Ubuntu    os    linux-distribution, os
+visionos    Apple visionOS    os    apple, os
+esxi    VMware ESXi    os    os, vmware
+photon    VMware Photon    os    os, vmware
+watchos    Apple watchOS    os    apple, os, smartwatch
+windows-embedded    Microsoft Windows Embedded    os    microsoft, os, windows
+windows-nano-server    Microsoft Nano Server    os    microsoft, os, windows
+windows-server-core    Microsoft Windows Server Core    os    microsoft, os, windows
+windows-server    Microsoft Windows Server    os    microsoft, os, windows
+windows    Microsoft Windows    os    microsoft, os, windows
+xcp-ng    XCP-ng    os    os
+yocto    Yocto Project    os    linux-distribution, os
+zentyal    Zentyal    os    linux-distribution, os
+

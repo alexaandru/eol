@@ -1,0 +1,414 @@
+Products (412):
+adonisjs    AdonisJS    framework    framework, javascript-runtime
+akeneo-pim    Akeneo PIM    server-app    php-runtime, server-app
+alibaba-ack    Alibaba ACK    service    alibaba, managed-kubernetes, service
+alibaba-dragonwell    Alibaba Dragonwell    lang    alibaba, java-distribution, lang
+almalinux    AlmaLinux OS    os    linux-distribution, os
+alpine-linux    Alpine Linux    os    linux-distribution, os
+amazon-cdk    Amazon CDK    framework    amazon, framework
+amazon-corretto    Amazon Corretto    lang    amazon, java-distribution, lang
+amazon-documentdb    Amazon DocumentDB    service    amazon, database, service
+amazon-eks    Amazon EKS    service    amazon, managed-kubernetes, service
+amazon-glue    Amazon Glue    service    amazon, service
+amazon-linux    Amazon Linux    os    amazon, linux-distribution, os
+amazon-msk    Amazon MSK    service    amazon, service
+amazon-neptune    Amazon Neptune    service    amazon, service
+amazon-rds-mariadb    Amazon RDS for MariaDB    service    amazon, database, service
+amazon-rds-mysql    Amazon RDS for MySQL    service    amazon, database, service
+amazon-rds-postgresql    Amazon RDS for PostgreSQL    service    amazon, database, service
+android    Android OS    os    google, os
+angular    Angular    framework    framework, google, herodevs, javascript-runtime
+angularjs    AngularJS    framework    discontinued, framework, google, herodevs, javascript-runtime
+ansible-core    Ansible-core    framework    framework, python-runtime, red-hat
+ansible    Ansible    app    app, python-runtime, red-hat
+antix    antiX Linux    os    linux-distribution, os
+apache-activemq-artemis    Apache ActiveMQ Artemis    server-app    apache, java-runtime, server-app
+apache-activemq    Apache ActiveMQ Classic    server-app    apache, java-runtime, server-app
+apache-airflow    Apache Airflow    framework    apache, framework, python-runtime
+ant    Apache Ant    app    apache, app, build-tool, java-runtime
+apache-apisix    Apache APISIX    server-app    apache, server-app, web-server
+apache-camel    Apache Camel    framework    apache, framework, java-runtime
+apache-cassandra    Apache Cassandra    database    apache, database, java-runtime
+apache-couchdb    Apache CouchDB    database    apache, database, erlang-runtime
+apache-flink    Apache Flink    server-app    apache, java-runtime, server-app
+apache-groovy    Apache Groovy    lang    apache, java-runtime, lang
+apache-hadoop    Apache Hadoop    database    apache, database, java-runtime
+apache-hop    Apache Hop    app    apache, app, java-runtime
+apache-http-server    Apache HTTP Server    server-app    apache, server-app, web-server
+apache-kafka    Apache Kafka    server-app    apache, java-runtime, server-app
+apache-lucene    Apache Lucene    framework    apache, framework, java-runtime
+apache-maven    Apache Maven    app    apache, app, build-tool, java-runtime
+apache-nifi    Apache NiFi    server-app    apache, java-runtime, server-app
+apache-pulsar    Apache Pulsar    server-app    apache, java-runtime, server-app
+apache-spark    Apache Spark    server-app    apache, java-runtime, server-app
+apache-struts    Apache Struts    framework    apache, framework, herodevs, java-runtime
+apache-subversion    Apache Subversion    server-app    server-app
+api-platform    API Platform    framework    framework, php-runtime
+tvos    Apple tvOS    os    apple, os
+apple-watch    Apple Watch    device    apple, device, watch
+arangodb    ArangoDB    database    database
+argo-cd    Argo CD    server-app    cncf, server-app
+artifactory    Artifactory    server-app    server-app
+aws-lambda    AWS Lambda    service    amazon, service
+azul-zulu    Azul Zulu    lang    azul, java-distribution, lang
+azure-devops-server    Azure DevOps Server    server-app    microsoft, server-app
+azure-kubernetes-service    Azure Kubernetes Service    service    managed-kubernetes, microsoft, service
+backdrop    Backdrop    server-app    php-runtime, server-app
+bamboo    Bamboo    server-app    atlassian, java-runtime, server-app
+bazel    Bazel    app    app, build-tool, google, java-runtime
+beats    Elastic Beats    server-app    elastic, server-app
+behat    Behat    framework    framework, php-runtime
+bellsoft-liberica    Bellsoft Liberica JDK    lang    bellsoft, java-distribution, lang
+big-ip    BIG-IP    os    os
+bigbluebutton    BigBlueButton    server-app    server-app
+bitbucket    Bitbucket    server-app    atlassian, java-runtime, server-app
+bitcoin-core    Bitcoin Core    server-app    server-app
+blender    Blender    app    app
+bootstrap    Bootstrap    framework    css-runtime, framework, herodevs, javascript-runtime
+boundary    Hashicorp Boundary    server-app    hashicorp, server-app
+bun    Bun    framework    framework, javascript-runtime
+cachet    Cachet    server-app    php-runtime, server-app
+caddy    caddy    server-app    server-app, web-server
+cakephp    CakePHP    framework    framework, php-runtime
+calico    Calico    server-app    server-app
+centos-stream    CentOS Stream    os    linux-distribution, os
+centos    CentOS    os    discontinued, linux-distribution, os
+centreon    Centreon    server-app    php-runtime, server-app
+cert-manager    cert-manager    app    app, cncf
+cfengine    CFEngine    app    app
+chef-infra-client    Chef Infra Client    app    app, progress, ruby-runtime
+chef-infra-server    Chef Infra Server    server-app    erlang-runtime, progress, ruby-runtime, server-app
+chef-inspec    Chef InSpec    app    app, progress, ruby-runtime
+chef-supermarket    Chef Supermarket    server-app    progress, ruby-runtime, server-app
+chef-workstation    Chef Workstation    app    app, progress, ruby-runtime
+chrome    Google Chrome    app    app, google, web-browser
+citrix-vad    Citrix Virtual Apps and Desktops    app    app, citrix
+ckeditor    CKEditor    framework    framework
+clamav    ClamAV    app    app
+clear-linux    Clear Linux    os    discontinued, intel, linux-distribution, os
+cnspec    cnspec    app    app, mondoo
+cockroachdb    CockroachDB    database    database
+coder    Coder    server-app    server-app
+coldfusion    Adobe ColdFusion    server-app    adobe, server-app
+composer    Composer    app    app, php-runtime
+confluence    Confluence    server-app    atlassian, java-runtime, server-app
+consul    Hashicorp Consul    server-app    hashicorp, server-app
+containerd    containerd    app    app
+contao    Contao    server-app    server-app
+contour    Contour    server-app    cncf, kubernetes, server-app
+controlm    Control-M    server-app    server-app
+cos    Google Container-Optimized OS (COS)    os    google, os
+couchbase-server    Couchbase Server    database    database
+craft-cms    Craft CMS    server-app    php-runtime, server-app
+dbt-core    dbt Core    app    app, python-runtime
+dce    DaoCloud Enterprise    server-app    kubernetes, server-app
+debian    Debian    os    linux-distribution, os
+deno    Deno    framework    framework, javascript-runtime
+dependency-track    Dependency-Track    server-app    java-runtime, server-app
+devuan    Devuan    os    linux-distribution, os
+django    Django    framework    framework, python-runtime
+docker-engine    Docker Engine    app    app
+dotnet    Microsoft .NET    framework    framework, microsoft
+dotnetfx    Microsoft .NET Framework    framework    framework, microsoft
+dovecot    Dovecot    server-app    server-app
+drupal    Drupal    server-app    php-runtime, server-app
+drush    Drush    app    app, php-runtime
+eclipse-jetty    Eclipse Jetty    server-app    eclipse, java-runtime, server-app, web-server
+eclipse-temurin    Eclipse Temurin    lang    eclipse, java-distribution, lang
+elasticsearch    Elasticsearch    database    database, elastic, java-runtime
+electron    Electron    framework    framework, javascript-runtime
+elixir    Elixir    lang    lang
+emberjs    Ember    framework    framework, javascript-runtime
+envoy    Envoy    server-app    cncf, server-app
+erlang    Erlang    lang    lang
+eslint    ESLint    app    app, build-tool, herodevs, javascript-runtime
+etcd    etcd    database    cncf, database
+eurolinux    EuroLinux    os    discontinued, linux-distribution, os
+exim    Exim    server-app    server-app
+express    Express    framework    framework, herodevs, javascript-runtime
+fairphone    Fairphone    device    device, mobile-phone
+fedora    Fedora Linux    os    linux-distribution, os
+ffmpeg    FFmpeg    framework    framework
+filemaker    FileMaker Platform    app    app
+firefox    Firefox    app    app, mozilla, web-browser
+fluent-bit    Fluent Bit    server-app    cncf, server-app
+flux    Flux    server-app    cncf, server-app
+font-awesome    Font Awesome    framework    framework
+foreman    Foreman    server-app    server-app
+forgejo    Forgejo    server-app    server-app
+fortios    FortiOS    os    fortinet, os
+freebsd    FreeBSD    os    bsd-distribution, os, unix-distribution
+gatekeeper    Gatekeeper    server-app    cncf, server-app
+gerrit    Gerrit    server-app    server-app
+ghc    Glasgow Haskell Compiler (GHC)    lang    lang
+gitlab    GitLab    server-app    gitlab, server-app
+go    Go    lang    google, lang
+goaccess    GoAccess    app    app
+godot    Godot    app    app
+google-kubernetes-engine    Google Kubernetes Engine    service    google, managed-kubernetes, service
+google-nexus    Google Nexus    device    device, discontinued, google, mobile-phone, tablet
+gorilla    Gorilla Toolkit    framework    framework
+graalvm-ce    GraalVM Community Edition    lang    java-distribution, lang, oracle
+gradle    Gradle    app    app, build-tool, java-runtime
+grafana-loki    Grafana Loki    server-app    server-app
+grafana    Grafana    server-app    server-app
+grails    Grails Framework    framework    framework, java-runtime
+graylog    Graylog    server-app    java-runtime, server-app
+greenlight    Greenlight    server-app    server-app
+grumphp    GrumPHP    framework    framework, php-runtime
+grunt    Grunt    app    app, herodevs, javascript-runtime
+gstreamer    GStreamer    framework    framework
+guzzle    Guzzle    framework    framework, php-runtime
+haproxy    HAProxy    server-app    server-app, web-server
+harbor    Harbor    server-app    cncf, server-app
+hashicorp-packer    Hashicorp Packer    server-app    hashicorp, server-app
+hashicorp-vault    Hashicorp Vault    server-app    hashicorp, server-app
+hbase    Apache HBase    database    apache, database, java-runtime
+ibm-aix    IBM AIX    os    ibm, os, unix-distribution
+ibm-db2    IBM Db2    database    database, ibm
+ibm-i    IBM iSeries    os    ibm, os, unix-distribution
+ibm-mq    IBM MQ    server-app    ibm, server-app
+ibm-semeru-runtime    IBM Semeru Runtime    lang    ibm, java-distribution, lang
+icinga-web    Icinga Web    server-app    php-runtime, server-app
+icinga    Icinga    server-app    server-app
+influxdb    InfluxDB    server-app    database, influxdata, server-app
+intel-processors    Intel Processors    device    device
+internet-explorer    Internet Explorer    app    app, microsoft, web-browser
+ionic    Ionic Framework    framework    framework, javascript-runtime
+ios    Apple iOS    os    apple, os
+ipad    Apple iPad    device    apple, device, tablet
+ipados    Apple iPadOS    os    apple, os
+iphone    Apple iPhone    device    apple, device, mobile-phone
+isc-dhcp    ISC DHCP    server-app    discontinued, server-app
+istio    Istio    server-app    server-app
+jekyll    Jekyll    app    app, ruby-runtime
+jenkins    Jenkins    server-app    java-runtime, server-app
+jhipster    JHipster    app    app, java-runtime, javascript-runtime
+jira-software    Jira Software    server-app    atlassian, java-runtime, server-app
+joomla    Joomla!    server-app    php-runtime, server-app
+jquery-ui    jQuery UI    framework    framework, javascript-runtime
+jquery    jQuery    framework    framework, javascript-runtime
+jreleaser    JReleaser    app    app, java-runtime
+julia    Julia    lang    lang
+kde-plasma    KDE Plasma    os    os
+keda    KEDA    server-app    cncf, server-app
+keycloak    Keycloak    server-app    java-runtime, red-hat, server-app
+kibana    Kibana    server-app    elastic, server-app
+kindle    Amazon Kindle    device    amazon, device, e-reader
+kirby    Kirby    server-app    server-app
+kong-gateway    Kong Gateway    server-app    server-app, web-server
+kotlin    Kotlin    lang    jetbrains, lang
+kubernetes-csi-node-driver-registrar    Kubernetes CSI Node Driver Registrar    server-app    kubernetes, server-app
+kubernetes-node-feature-discovery    Kubernetes Node Feature Discovery    server-app    kubernetes, server-app
+kubernetes    Kubernetes    server-app    server-app
+kuma    Kuma    server-app    cncf, server-app
+kyverno    Kyverno    server-app    cncf, kubernetes, server-app
+laravel    Laravel    framework    framework, php-runtime
+ldap-account-manager    LDAP Account Manager    server-app    server-app
+libreoffice    LibreOffice    app    app
+lineageos    LineageOS    os    os
+linux    Linux Kernel    os    os
+linuxmint    Linux Mint    os    linux-distribution, os
+liquibase    Liquibase    framework    framework, java-runtime
+log4j    Apache Log4j    framework    framework, java-runtime
+logstash    Logstash    server-app    elastic, server-app
+looker    Looker    server-app    google, server-app
+lua    Lua    lang    lang
+macos    Apple macOS    os    apple, os
+mageia    Mageia    os    linux-distribution, os
+magento    Magento    server-app    php-runtime, server-app
+mandrel    Mandrel    lang    java-distribution, lang, red-hat
+mariadb    MariaDB    database    database
+mastodon    Mastodon    server-app    javascript-runtime, ruby-runtime, server-app
+matomo    Matomo    server-app    php-runtime, server-app
+mattermost    Mattermost    server-app    server-app
+mautic    Mautic    server-app    php-runtime, server-app
+mediawiki    MediaWiki    server-app    php-runtime, server-app
+meilisearch    Meilisearch    server-app    meilisearch, server-app
+memcached    Memcached    database    database
+micronaut    Micronaut Framework    framework    framework, java-runtime
+microsoft-build-of-openjdk    Microsoft Build of OpenJDK    lang    java-distribution, lang, microsoft
+mongodb    MongoDB Server    database    database
+moodle    Moodle    server-app    php-runtime, server-app
+motorola-mobility    Motorola Mobility    device    device, mobile-phone, motorola
+msexchange    Microsoft Exchange    server-app    microsoft, server-app
+mssqlserver    Microsoft SQL Server    database    database, microsoft
+mulesoft-runtime    Mule Runtime    server-app    java-runtime, server-app
+mxlinux    MX Linux    os    linux-distribution, os
+mysql    MySQL    database    database, oracle
+neo4j    Neo4j    database    database, java-runtime
+neos    Neos    server-app    php-runtime, server-app
+netapp-ontap    NetApp ONTAP    os    netapp, os
+netbackup-appliance-os    NetBackup Appliance OS    os    os, veritas
+netbsd    NetBSD    os    bsd-distribution, os, unix-distribution
+nextcloud    Nextcloud    server-app    php-runtime, server-app
+nextjs    Next.js    framework    framework, javascript-runtime, vercel
+nexus    Nexus Repository    server-app    java-runtime, server-app
+nginx    nginx    server-app    server-app, web-server
+nix    nix    app    app
+nixos    NixOS    os    linux-distribution, os
+nodejs    Node.js    framework    framework, herodevs, javascript-runtime
+nokia    Nokia Mobile    device    device, mobile-phone
+nomad    Nomad    server-app    hashicorp, server-app
+notepad-plus-plus    Notepad++    app    app
+numpy    NumPy    framework    framework, python-runtime
+nutanix-aos    Nutanix AOS    os    nutanix, os
+nutanix-files    Nutanix Files    server-app    nutanix, server-app
+nutanix-prism    Nutanix Prism Central    server-app    nutanix, server-app
+nuxt    Nuxt    framework    framework, herodevs, javascript-runtime
+nvidia    NVIDIA Driver    app    app, nvidia
+nvidia-gpu    NVIDIA GPUs    device    device, nvidia
+nvm    nvm    app    app, herodevs, javascript-runtime
+office    Microsoft Office    app    app, microsoft
+horizon    Omnissa Horizon    app    app
+oneplus    OnePlus    device    device, mobile-phone
+openbsd    OpenBSD    os    bsd-distribution, os, unix-distribution
+openjdk-builds-from-oracle    OpenJDK builds from Oracle    lang    java-distribution, lang, oracle
+opensearch    OpenSearch    database    amazon, database, java-runtime
+openssl    OpenSSL    framework    framework
+opensuse    openSUSE    os    linux-distribution, os
+opentofu    OpenTofu    app    app, cncf
+openvpn    OpenVPN    app    app
+openwrt    OpenWrt    os    linux-distribution, os
+openzfs    OpenZFS    app    app
+opnsense    OPNsense    server-app    php-runtime, server-app
+oracle-apex    Oracle APEX    framework    framework, oracle
+oracle-database    Oracle Database    database    database, oracle
+oracle-graalvm    Oracle GraalVM    lang    java-distribution, lang, oracle
+oracle-jdk    Oracle JDK    lang    java-distribution, lang, oracle
+oracle-linux    Oracle Linux    os    linux-distribution, oracle, os
+oracle-solaris    Oracle Solaris    os    oracle, os, unix-distribution
+ovirt    oVirt    server-app    server-app
+cortex-xdr    Palo Alto Networks Cortex XDR agent    app    app, palo-alto-networks
+pangp    Palo Alto Networks GlobalProtect App    app    app, palo-alto-networks
+panos    Palo Alto Networks PAN-OS    os    os, palo-alto-networks
+pci-dss    PCI-DSS    standard    standard
+perl    Perl    lang    lang
+phoenix-framework    Phoenix Framework    framework    framework
+php    PHP    lang    lang
+phpbb    phpBB    server-app    php-runtime, server-app
+phpmyadmin    phpMyAdmin    server-app    php-runtime, server-app
+pigeonhole    Pigeonhole    server-app    server-app
+pixel-watch    Google Pixel Watch    device    device, google, watch
+pixel    Google Pixel    device    device, google, mobile-phone
+plesk    Plesk    server-app    php-runtime, server-app
+plone    Plone    server-app    python-runtime, server-app
+pnpm    pnpm    app    app, build-tool, javascript-runtime
+podman    Podman    app    app
+pop-os    Pop!_OS    os    linux-distribution, os
+postfix    Postfix    server-app    server-app
+postgresql    PostgreSQL    database    database
+postmarketos    postmarketOS    os    linux-distribution, os
+powershell    Microsoft PowerShell    lang    lang, microsoft
+privatebin    PrivateBin    server-app    server-app
+proftpd    ProFTPD    server-app    server-app
+prometheus    Prometheus    server-app    server-app
+protractor    Protractor    framework    framework, google, herodevs, javascript-runtime
+proxmox-ve    Proxmox VE    os    os
+puppet    Puppet    server-app    server-app
+python    Python    lang    lang
+qt    Qt    framework    framework
+quarkus-framework    Quarkus    framework    framework, java-runtime
+quasar    Quasar    framework    framework, javascript-runtime
+rabbitmq    RabbitMQ    server-app    erlang-runtime, server-app
+rancher    Rancher    server-app    server-app, suse
+raspberry-pi    Raspberry Pi    device    device
+react-native    React Native    framework    framework, javascript-runtime, meta
+react    React    framework    framework, javascript-runtime, meta
+redhat-build-of-openjdk    Red Hat build of OpenJDK    lang    java-distribution, lang, red-hat
+redhat-jboss-eap    Red Hat JBoss Enterprise Application Platform    server-app    java-runtime, red-hat, server-app
+red-hat-openshift    Red Hat OpenShift    server-app    red-hat, server-app
+redhat-satellite    Red Hat Satellite    server-app    red-hat, server-app
+redis    Redis    database    database
+redmine    Redmine    server-app    ruby-runtime, server-app
+rhel    Red Hat Enterprise Linux    os    linux-distribution, os, red-hat
+robo    Robo    framework    framework, php-runtime
+rocket-chat    Rocket.Chat    server-app    javascript-runtime, server-app
+rocky-linux    Rocky Linux    os    linux-distribution, os
+ros-2    ROS 2    framework    framework
+ros    ROS    framework    discontinued, framework
+roundcube    Roundcube Webmail    server-app    php-runtime, server-app
+rtpengine    rtpengine    server-app    server-app
+rails    Ruby on Rails    framework    framework, ruby-runtime
+ruby    Ruby    lang    lang
+rust    Rust    lang    lang, rust-foundation
+salt    Salt    server-app    python-runtime, server-app
+samsung-galaxy-tab    Samsung Galaxy Tab    device    device, tablet
+samsung-galaxy-watch    Samsung Galaxy Watch    device    device, smartwatch
+samsung-mobile    Samsung Mobile    device    device, mobile-phone
+sapmachine    SapMachine    lang    java-distribution, lang, sap
+scala    Scala    lang    java-runtime, lang
+sharepoint    Microsoft SharePoint    server-app    microsoft, server-app
+shopware    Shopware    server-app    php-runtime, server-app
+silverstripe    Silverstripe CMS    server-app    php-runtime, server-app
+slackware    Slackware Linux    os    linux-distribution, os
+sles    SUSE Linux Enterprise Server    os    linux-distribution, os, suse
+sns-firmware    Stormshield firmware    os    os, stormshield
+sns-hardware    Stormshield hardware    device    device, stormshield
+solr    Apache Solr    server-app    apache, java-runtime, server-app
+sonar    SonarQube    server-app    java-runtime, server-app
+sourcegraph    Sourcegraph    server-app    java-runtime, server-app
+splunk    Splunk    server-app    cisco, server-app
+spring-boot    Spring Boot    framework    framework, java-runtime, vmware
+spring-framework    Spring Framework    framework    framework, java-runtime, vmware
+sqlite    SQLite    database    database
+squid    Squid    server-app    server-app
+statamic    Statamic    server-app    php-runtime, server-app
+steamos    SteamOS    os    linux-distribution, os
+surface    Microsoft Surface    device    device, microsoft
+suse-manager    SUSE Manager    server-app    server-app, suse
+svelte    Svelte    framework    framework, javascript-runtime
+symfony    Symfony    framework    framework, php-runtime
+tails    Tails    os    linux-distribution, os
+tailwind-css    Tailwind CSS    framework    css-runtime, framework, framework
+tarantool    Tarantool    database    database
+tarteaucitron    tarteaucitron    framework    framework, javascript-runtime
+telegraf    Telegraf    server-app    server-app
+terraform    Hashicorp Terraform    app    app, hashicorp
+thumbor    Thumbor    server-app    python-runtime, server-app, web-server
+tls    TLS    standard    ietf, standard
+tomcat    Apache Tomcat    server-app    apache, server-app, web-server
+traefik    Traefik    server-app    server-app, web-server
+twig    Twig    framework    framework, php-runtime
+typo3    TYPO3    server-app    php-runtime, server-app
+ubuntu    Ubuntu    os    linux-distribution, os
+umbraco    Umbraco CMS    server-app    dotnet-runtime, server-app
+unity    Unity    app    app
+unrealircd    UnrealIRCd    server-app    server-app
+valkey    Valkey    database    database
+varnish    Varnish    server-app    server-app, web-server
+veeam-backup-and-replication    Veeam Backup & Replication    app    app, veeam
+veeam-backup-for-microsoft-365    Veeam Backup for Microsoft 365    app    app, veeam
+veeam-one    Veeam ONE    app    app, veeam
+virtualbox    VirtualBox    app    app, oracle
+visionos    Apple visionOS    os    apple, os
+visual-cobol    Visual COBOL    lang    lang
+visual-studio    Microsoft Visual Studio    app    app, microsoft
+vitess    Vitess    database    database
+vmware-cloud-foundation    VMware Cloud Foundation    server-app    server-app, vmware
+esxi    VMware ESXi    os    os, vmware
+vmware-harbor-registry    VMware Harbor Registry    server-app    cncf, server-app
+photon    VMware Photon    os    os, vmware
+vmware-srm    VMware Site Recovery Manager    server-app    server-app, vmware
+vcenter    VMware vCenter Server    app    app, vmware
+vue    Vue    framework    framework, herodevs, javascript-runtime
+vuetify    Vuetify    framework    framework, herodevs, javascript-runtime
+wagtail    Wagtail    framework    framework, python-runtime
+watchos    Apple watchOS    os    apple, os, smartwatch
+weakforced    Weakforced    server-app    server-app, web-server
+weechat    WeeChat    app    app
+windows-embedded    Microsoft Windows Embedded    os    microsoft, os, windows
+windows-nano-server    Microsoft Nano Server    os    microsoft, os, windows
+windows-server-core    Microsoft Windows Server Core    os    microsoft, os, windows
+windows-server    Microsoft Windows Server    os    microsoft, os, windows
+windows    Microsoft Windows    os    microsoft, os, windows
+wireshark    Wireshark    app    app
+wordpress    WordPress    server-app    php-runtime, server-app
+xcp-ng    XCP-ng    os    os
+yarn    Yarn    app    app, build-tool, javascript-runtime
+yocto    Yocto Project    os    linux-distribution, os
+zabbix    Zabbix    server-app    php-runtime, server-app
+zentyal    Zentyal    os    linux-distribution, os
+zerto    HPE Zerto    app    app, hpe, zerto
+zookeeper    Apache ZooKeeper    server-app    apache, java-runtime, server-app
+

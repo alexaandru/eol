@@ -1,660 +1,252 @@
-package eol
+package main
 
 import (
-	"encoding/json"
+	"bytes"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"reflect"
+	"slices"
+	"strings"
 	"testing"
-	"time"
 )
 
-const null = "null"
+type mockHTTPClient struct{}
 
-func TestUriJSON(t *testing.T) {
+func TestNew(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name     string
-		uri      URI
-		expected string
-	}{
-		{
-			name:     "basic uri",
-			uri:      URI{Name: "products", URI: "https://example.com/products"},
-			expected: `{"name":"products","uri":"https://example.com/products"}`,
-		},
-		{
-			name:     "empty uri",
-			uri:      URI{},
-			expected: `{"name":"","uri":""}`,
-		},
-		{
-			name:     "uri with special characters",
-			uri:      URI{Name: "test-name", URI: "https://example.com/api/v1?param=value"},
-			expected: `{"name":"test-name","uri":"https://example.com/api/v1?param=value"}`,
-		},
+	c, _ := New([]string{"release", "go", "1.24", "-f", "text", "-t", "{{.}}"})
+
+	if c.sink != os.Stdout {
+		t.Fatalf("Expected sink to be os.Stdout, got %v", c.sink)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+	if x := c.baseURL.String(); x != DefaultBaseURL {
+		t.Fatalf("Expected baseURL to be %q, got %q", DefaultBaseURL, x)
+	}
 
-			// Test marshaling.
-			data, err := json.Marshal(tt.uri)
-			if err != nil {
-				t.Errorf("Failed to marshal Uri: %v", err)
-			}
+	if x := c.format; x != FormatText {
+		t.Fatalf("Expected format to be 'text', got %q", x)
+	}
 
-			if string(data) != tt.expected {
-				t.Errorf("Expected JSON %s, got %s", tt.expected, string(data))
-			}
+	if x := c.inlineTemplate; x != "{{.}}" {
+		t.Fatalf("Expected templateStr to be '{{.}}', got %q", x)
+	}
 
-			// Test unmarshaling.
-			var unmarshaled URI
+	if x := c.command; x != "release" {
+		t.Fatalf("Expected command to be 'release', got %q", x)
+	}
 
-			err = json.Unmarshal(data, &unmarshaled)
-			if err != nil {
-				t.Errorf("Failed to unmarshal Uri: %v", err)
-			}
+	if x := c.args; !slices.Equal(x, []string{"go", "1.24"}) {
+		t.Fatalf("Expected args to be [go 1.24], got %v", x)
+	}
 
-			if unmarshaled != tt.uri {
-				t.Errorf("Expected %+v, got %+v", tt.uri, unmarshaled)
-			}
-		})
+	if c.httpClient == nil {
+		t.Fatal("Expected httpClient to be non-nil")
+	}
+
+	if c.templates == nil {
+		t.Fatal("Expected templates to be non-nil")
 	}
 }
 
-func TestIdentifierJSON(t *testing.T) {
+func TestClientHandle(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name       string
-		identifier Identifier
-		expected   string
-	}{
-		{
-			name:       "basic identifier",
-			identifier: Identifier{ID: "test-id", Type: "cpe"},
-			expected:   `{"id":"test-id","type":"cpe"}`,
-		},
-		{
-			name:       "empty identifier",
-			identifier: Identifier{},
-			expected:   `{"id":"","type":""}`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			// Test marshaling.
-			data, err := json.Marshal(tt.identifier)
-			if err != nil {
-				t.Errorf("Failed to marshal Identifier: %v", err)
-			}
-
-			if string(data) != tt.expected {
-				t.Errorf("Expected JSON %s, got %s", tt.expected, string(data))
-			}
-
-			// Test unmarshaling.
-			var unmarshaled Identifier
-
-			err = json.Unmarshal(data, &unmarshaled)
-			if err != nil {
-				t.Errorf("Failed to unmarshal Identifier: %v", err)
-			}
-
-			if unmarshaled != tt.identifier {
-				t.Errorf("Expected %+v, got %+v", tt.identifier, unmarshaled)
-			}
-		})
-	}
-}
-
-func TestProductVersionJSON(t *testing.T) {
-	t.Parallel()
-
-	dateStr := "2023-01-01"
-	linkStr := "https://example.com"
-
-	tests := []struct {
-		name           string
-		productVersion ProductVersion
-		expectedJSON   string
-	}{
-		{
-			name: "complete product version",
-			productVersion: ProductVersion{
-				Date: &dateStr,
-				Link: &linkStr,
-				Name: "1.0.0",
-			},
-			expectedJSON: `{"date":"2023-01-01","link":"https://example.com","name":"1.0.0"}`,
-		},
-		{
-			name: "minimal product version",
-			productVersion: ProductVersion{
-				Name: "1.0.0",
-			},
-			expectedJSON: `{"date":null,"link":null,"name":"1.0.0"}`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			// Test marshaling.
-			data, err := json.Marshal(tt.productVersion)
-			if err != nil {
-				t.Errorf("Failed to marshal ProductVersion: %v", err)
-			}
-
-			if string(data) != tt.expectedJSON {
-				t.Errorf("Expected JSON %s, got %s", tt.expectedJSON, string(data))
-			}
-
-			// Test unmarshaling.
-			var unmarshaled ProductVersion
-
-			err = json.Unmarshal(data, &unmarshaled)
-			if err != nil {
-				t.Errorf("Failed to unmarshal ProductVersion: %v", err)
-			}
-
-			// Compare fields individually due to pointer comparison issues.
-			if tt.productVersion.Date != nil && unmarshaled.Date != nil {
-				if *tt.productVersion.Date != *unmarshaled.Date {
-					t.Errorf("Date mismatch: expected %s, got %s", *tt.productVersion.Date, *unmarshaled.Date)
-				}
-			} else if tt.productVersion.Date != unmarshaled.Date {
-				t.Errorf("Date pointer mismatch")
-			}
-
-			if tt.productVersion.Link != nil && unmarshaled.Link != nil {
-				if *tt.productVersion.Link != *unmarshaled.Link {
-					t.Errorf("Link mismatch: expected %s, got %s", *tt.productVersion.Link, *unmarshaled.Link)
-				}
-			} else if tt.productVersion.Link != unmarshaled.Link {
-				t.Errorf("Link pointer mismatch")
-			}
-
-			if tt.productVersion.Name != unmarshaled.Name {
-				t.Errorf("Name mismatch: expected %s, got %s", tt.productVersion.Name, unmarshaled.Name)
-			}
-		})
-	}
-}
-
-func TestProductReleaseJSON(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name           string
-		productRelease ProductRelease
-		expectJSON     bool
-	}{
-		{
-			name: "complete product release",
-			productRelease: ProductRelease{
-				Name:         "1.0.0",
-				Label:        "1.0.0",
-				ReleaseDate:  "2023-01-01",
-				IsLts:        true,
-				IsMaintained: true,
-				IsEol:        false,
-			},
-			expectJSON: true,
-		},
-		{
-			name: "minimal product release",
-			productRelease: ProductRelease{
-				Name:        "1.0.0",
-				Label:       "1.0.0",
-				ReleaseDate: "2023-01-01",
-			},
-			expectJSON: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			// Test JSON marshaling (should use MarshalJSON).
-			data, err := json.Marshal(tt.productRelease)
-			if err != nil {
-				t.Errorf("Failed to marshal ProductRelease: %v", err)
-			}
-
-			// Should be valid JSON.
-			var result map[string]any
-
-			err = json.Unmarshal(data, &result)
-			if err != nil {
-				t.Errorf("Marshaled data is not valid JSON: %v", err)
-			}
-
-			// Check that key fields are present.
-			if result["name"] != tt.productRelease.Name {
-				t.Errorf("Expected name %s, got %v", tt.productRelease.Name, result["name"])
-			}
-
-			if result["label"] != tt.productRelease.Label {
-				t.Errorf("Expected label %s, got %v", tt.productRelease.Label, result["label"])
-			}
-		})
-	}
-}
-
-func TestProductSummaryJSON(t *testing.T) {
-	t.Parallel()
-
-	productSummary := ProductSummary{
-		Name:     "go",
-		Label:    "Go",
-		Category: "lang",
-		URI:      "https://example.com/go",
-		Aliases:  []string{"golang"},
-		Tags:     []string{"google", "lang"},
-	}
-
-	// Test marshaling.
-	data, err := json.Marshal(productSummary)
-	if err != nil {
-		t.Errorf("Failed to marshal ProductSummary: %v", err)
-	}
-
-	// Test unmarshaling.
-	var unmarshaled ProductSummary
-
-	err = json.Unmarshal(data, &unmarshaled)
-	if err != nil {
-		t.Errorf("Failed to unmarshal ProductSummary: %v", err)
-	}
-
-	// Compare fields.
-	if unmarshaled.Name != productSummary.Name {
-		t.Errorf("Name mismatch: expected %s, got %s", productSummary.Name, unmarshaled.Name)
-	}
-
-	if len(unmarshaled.Aliases) != len(productSummary.Aliases) {
-		t.Errorf("Aliases length mismatch: expected %d, got %d", len(productSummary.Aliases), len(unmarshaled.Aliases))
-	}
-
-	if len(unmarshaled.Tags) != len(productSummary.Tags) {
-		t.Errorf("Tags length mismatch: expected %d, got %d", len(productSummary.Tags), len(unmarshaled.Tags))
-	}
-}
-
-func TestProductLabelsJSON(t *testing.T) {
-	t.Parallel()
-
-	eoasStr := "End of Active Support"
-	discontinuedStr := "Discontinued"
-	eoesStr := "End of Extended Support"
-
-	tests := []struct {
-		name   string
-		labels ProductLabels
-	}{
-		{
-			name: "complete labels",
-			labels: ProductLabels{
-				Eoas:         &eoasStr,
-				Discontinued: &discontinuedStr,
-				Eoes:         &eoesStr,
-				Eol:          "End of Life",
-			},
-		},
-		{
-			name: "minimal labels",
-			labels: ProductLabels{
-				Eol: "End of Life",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			// Test marshaling.
-			data, err := json.Marshal(tt.labels)
-			if err != nil {
-				t.Errorf("Failed to marshal ProductLabels: %v", err)
-			}
-
-			// Test unmarshaling.
-			var unmarshaled ProductLabels
-
-			err = json.Unmarshal(data, &unmarshaled)
-			if err != nil {
-				t.Errorf("Failed to unmarshal ProductLabels: %v", err)
-			}
-
-			if unmarshaled.Eol != tt.labels.Eol {
-				t.Errorf("Eol mismatch: expected %s, got %s", tt.labels.Eol, unmarshaled.Eol)
-			}
-		})
-	}
-}
-
-func TestProductLinksJSON(t *testing.T) {
-	t.Parallel()
-
-	iconStr := "https://example.com/icon.png"
-	policyStr := "https://example.com/policy"
-
-	productLinks := ProductLinks{
-		Icon:          &iconStr,
-		ReleasePolicy: &policyStr,
-		HTML:          "https://example.com",
-	}
-
-	// Test marshaling.
-	data, err := json.Marshal(productLinks)
-	if err != nil {
-		t.Errorf("Failed to marshal ProductLinks: %v", err)
-	}
-
-	// Test unmarshaling.
-	var unmarshaled ProductLinks
-
-	err = json.Unmarshal(data, &unmarshaled)
-	if err != nil {
-		t.Errorf("Failed to unmarshal ProductLinks: %v", err)
-	}
-
-	if unmarshaled.HTML != productLinks.HTML {
-		t.Errorf("HTML mismatch: expected %s, got %s", productLinks.HTML, unmarshaled.HTML)
-	}
-}
-
-func TestProductDetailsJSON(t *testing.T) {
-	t.Parallel()
-
-	productDetails := ProductDetails{
-		Name:     "go",
-		Label:    "Go",
-		Aliases:  []string{"golang"},
-		Category: "lang",
-		Tags:     []string{"google", "lang"},
-		Labels: ProductLabels{
-			Eol: "End of Life",
-		},
-		Links: ProductLinks{
-			HTML: "https://example.com",
-		},
-		Releases: []ProductRelease{
-			{
-				Name:        "1.0.0",
-				Label:       "1.0.0",
-				ReleaseDate: "2023-01-01",
-			},
-		},
-	}
-
-	// Test JSON marshaling (should use MarshalJSON).
-	data, err := json.Marshal(productDetails)
-	if err != nil {
-		t.Errorf("Failed to marshal ProductDetails: %v", err)
-	}
-
-	// Should be valid JSON.
-	var result map[string]any
-
-	err = json.Unmarshal(data, &result)
-	if err != nil {
-		t.Errorf("Marshaled data is not valid JSON: %v", err)
-	}
-
-	// Check that key fields are present.
-	if result["name"] != productDetails.Name {
-		t.Errorf("Expected name %s, got %v", productDetails.Name, result["name"])
-	}
-
-	if result["category"] != productDetails.Category {
-		t.Errorf("Expected category %s, got %v", productDetails.Category, result["category"])
-	}
-}
-
-func TestUriListResponseJSON(t *testing.T) {
-	t.Parallel()
-
-	response := URIListResponse{
-		SchemaVersion: "1.2.0",
-		Total:         2,
-		Result: []URI{
-			{Name: "products", URI: "https://example.com/products"},
-			{Name: "categories", URI: "https://example.com/categories"},
-		},
-	}
-
-	// Test marshaling.
-	data, err := json.Marshal(response)
-	if err != nil {
-		t.Errorf("Failed to marshal UriListResponse: %v", err)
-	}
-
-	// Test unmarshaling.
-	var unmarshaled URIListResponse
-
-	err = json.Unmarshal(data, &unmarshaled)
-	if err != nil {
-		t.Errorf("Failed to unmarshal UriListResponse: %v", err)
-	}
-
-	if unmarshaled.SchemaVersion != response.SchemaVersion {
-		t.Errorf("SchemaVersion mismatch: expected %s, got %s", response.SchemaVersion, unmarshaled.SchemaVersion)
-	}
-
-	if unmarshaled.Total != response.Total {
-		t.Errorf("Total mismatch: expected %d, got %d", response.Total, unmarshaled.Total)
-	}
-
-	if len(unmarshaled.Result) != len(response.Result) {
-		t.Errorf("Result length mismatch: expected %d, got %d", len(response.Result), len(unmarshaled.Result))
-	}
-}
-
-func TestProductListResponseJSON(t *testing.T) {
-	t.Parallel()
-
-	response := ProductListResponse{
-		SchemaVersion: "1.2.0",
-		Total:         1,
-		Result: []ProductSummary{
-			{
-				Name:     "go",
-				Label:    "Go",
-				Category: "lang",
-				URI:      "https://example.com/go",
-			},
-		},
-	}
-
-	// Test marshaling.
-	data, err := json.Marshal(response)
-	if err != nil {
-		t.Errorf("Failed to marshal ProductListResponse: %v", err)
-	}
-
-	// Test unmarshaling.
-	var unmarshaled ProductListResponse
-
-	err = json.Unmarshal(data, &unmarshaled)
-	if err != nil {
-		t.Errorf("Failed to unmarshal ProductListResponse: %v", err)
-	}
-
-	if unmarshaled.Total != response.Total {
-		t.Errorf("Total mismatch: expected %d, got %d", response.Total, unmarshaled.Total)
-	}
-}
-
-func TestProductResponseJSON(t *testing.T) {
-	t.Parallel()
-
-	timestamp := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
-	response := ProductResponse{
-		SchemaVersion: "1.2.0",
-		LastModified:  timestamp,
-		Result: ProductDetails{
-			Name:     "go",
-			Label:    "Go",
-			Category: "lang",
-		},
-	}
-
-	// Test marshaling.
-	data, err := json.Marshal(response)
-	if err != nil {
-		t.Errorf("Failed to marshal ProductResponse: %v", err)
-	}
-
-	// Test unmarshaling.
-	var unmarshaled ProductResponse
-
-	err = json.Unmarshal(data, &unmarshaled)
-	if err != nil {
-		t.Errorf("Failed to unmarshal ProductResponse: %v", err)
-	}
-
-	if unmarshaled.SchemaVersion != response.SchemaVersion {
-		t.Errorf("SchemaVersion mismatch: expected %s, got %s", response.SchemaVersion, unmarshaled.SchemaVersion)
-	}
-}
-
-func TestProductReleaseResponseJSON(t *testing.T) {
-	t.Parallel()
-
-	response := ProductReleaseResponse{
-		SchemaVersion: "1.2.0",
-		Result: ProductRelease{
-			Name:        "1.0.0",
-			Label:       "1.0.0",
-			ReleaseDate: "2023-01-01",
-		},
-	}
-
-	// Test marshaling.
-	data, err := json.Marshal(response)
-	if err != nil {
-		t.Errorf("Failed to marshal ProductReleaseResponse: %v", err)
-	}
-
-	// Test unmarshaling.
-	var unmarshaled ProductReleaseResponse
-
-	err = json.Unmarshal(data, &unmarshaled)
-	if err != nil {
-		t.Errorf("Failed to unmarshal ProductReleaseResponse: %v", err)
-	}
-
-	if unmarshaled.SchemaVersion != response.SchemaVersion {
-		t.Errorf("SchemaVersion mismatch: expected %s, got %s", response.SchemaVersion, unmarshaled.SchemaVersion)
-	}
-}
-
-func TestIdentifierProductJSON(t *testing.T) {
-	t.Parallel()
-
-	identifierProduct := IdentifierProduct{
-		Identifier: "test-identifier",
-		Product:    URI{Name: "go", URI: "https://example.com/go"},
-	}
-
-	// Test marshaling.
-	data, err := json.Marshal(identifierProduct)
-	if err != nil {
-		t.Errorf("Failed to marshal IdentifierProduct: %v", err)
-	}
-
-	// Test unmarshaling.
-	var unmarshaled IdentifierProduct
-
-	err = json.Unmarshal(data, &unmarshaled)
-	if err != nil {
-		t.Errorf("Failed to unmarshal IdentifierProduct: %v", err)
-	}
-
-	if unmarshaled.Identifier != identifierProduct.Identifier {
-		t.Errorf("Identifier mismatch: expected %s, got %s", identifierProduct.Identifier, unmarshaled.Identifier)
-	}
-
-	if unmarshaled.Product.Name != identifierProduct.Product.Name {
-		t.Errorf("Product name mismatch: expected %s, got %s", identifierProduct.Product.Name, unmarshaled.Product.Name)
-	}
-}
-
-func TestIdentifierListResponseJSON(t *testing.T) {
-	t.Parallel()
-
-	response := IdentifierListResponse{
-		SchemaVersion: "1.2.0",
-		Total:         1,
-		Result: []IdentifierProduct{
-			{
-				Identifier: "test-id",
-				Product:    URI{Name: "go", URI: "https://example.com/go"},
-			},
-		},
-	}
-
-	// Test marshaling.
-	data, err := json.Marshal(response)
-	if err != nil {
-		t.Errorf("Failed to marshal IdentifierListResponse: %v", err)
-	}
-
-	// Test unmarshaling.
-	var unmarshaled IdentifierListResponse
-
-	err = json.Unmarshal(data, &unmarshaled)
-	if err != nil {
-		t.Errorf("Failed to unmarshal IdentifierListResponse: %v", err)
-	}
-
-	if unmarshaled.Total != response.Total {
-		t.Errorf("Total mismatch: expected %d, got %d", response.Total, unmarshaled.Total)
-	}
-}
-
-func TestEmptyAndNilFields(t *testing.T) {
-	t.Parallel()
-
-	// Test that structures handle empty and nil fields correctly.
 	//nolint:govet // ok
-	tests := []struct {
-		name string
-		data any
+	cases := []struct {
+		args     string
+		expError error
 	}{
-		{"empty Uri", URI{}},
-		{"empty Identifier", Identifier{}},
-		{"empty ProductVersion", ProductVersion{}},
-		{"empty ProductRelease", ProductRelease{}},
-		{"empty ProductSummary", ProductSummary{}},
-		{"empty ProductLabels", ProductLabels{}},
-		{"empty ProductLinks", ProductLinks{}},
-		{"empty ProductDetails", ProductDetails{}},
+		{"-h", nil},
+		{"--help", nil},
+		{"help", nil},
+		{"version", nil},
+		{"index", nil},
+		{"index -t '{{.}}'", nil},
+		{"index -f json", nil},
+		{"index -t json", errInlineTemplate},
+		{"products", nil},
+		{"products-full", nil},
+		{"product go", nil},
+		{"product nokia", nil},
+		{"product aws-lambda", nil},
+		{"release ubuntu 22.04", nil},
+		{"release go 1.24.6.100", nil},
+		{"release go 1.24.6", nil},
+		{"release go 1.24", nil},
+		{"release go 1", errReleaseNotFound},
+		{"latest ubuntu", nil},
+		{"categories", nil},
+		{"category os", nil},
+		{"tags", nil},
+		{"tag lang", nil},
+		{"identifiers", nil},
+		{"identifier purl", nil},
+		{"completion", nil},
+		{"completion-bash", nil},
+		{"completion-zsh", nil},
+		{"templates-export --templates-dir testdata/export1", nil},
+		{"bogus", ErrUsage},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, tc := range cases {
+		t.Run(tc.args, func(t *testing.T) {
 			t.Parallel()
 
-			// Should be able to marshal to JSON.
-			data, err := json.Marshal(tt.data)
-			if err != nil {
-				t.Errorf("Failed to marshal %s: %v", tt.name, err)
+			c, err := New(strings.Split(tc.args, " "))
+			if err != nil && !errors.Is(err, tc.expError) {
+				t.Fatalf("Unexpected error: %v", err)
 			}
 
-			// Should be valid JSON.
-			var result any
-			if jsonErr := json.Unmarshal(data, &result); jsonErr != nil {
-				t.Errorf("Marshaled %s is not valid JSON: %v", tt.name, jsonErr)
+			if err != nil {
+				return
+			}
+
+			buf := &bytes.Buffer{}
+			c.sink = buf
+			c.httpClient = &mockHTTPClient{}
+
+			if err = c.Handle(); !errors.Is(err, tc.expError) { //nolint:nestif // ok
+				t.Fatalf("Expected error %v, got %v", tc.expError, err)
+			} else if err == nil {
+				args := append([]string{c.command}, c.args...)
+				if c.format != FormatText {
+					args = append(args, "json")
+				}
+
+				if c.inlineTemplate != "" {
+					args = append(args, fmt.Sprintf("inline%d", len(c.inlineTemplate)))
+				}
+
+				if c.inlineTemplate != "" {
+					args = append(args, "inline")
+				} else if c.templatesDir != "" {
+					args = append(args, filepath.Base(c.templatesDir))
+				}
+
+				fname := strings.ReplaceAll(strings.Join(args, "_"), " ", "_")
+				fname = filepath.Join("testdata", "handle", fname)
+				t.Logf("Handle golden copy: %q", fname)
+
+				var exp []byte
+
+				exp, err = os.ReadFile(fname)
+				if err != nil {
+					t.Fatalf("Failed to read expected output from %q: %v", fname, err)
+				}
+
+				t.Logf("Golden copy file: %q", fname)
+
+				if x := buf.String(); x != string(exp) {
+					t.Fatalf("Expected output to contain %q, got %q", exp, x)
+				}
 			}
 		})
 	}
+}
+
+func TestClientParseFlags(t *testing.T) {
+	t.Parallel()
+
+	//nolint:govet // ok
+	cases := []struct {
+		args   []string
+		exp    *client
+		expErr error
+	}{
+		{nil, nil, ErrUsage},
+		{[]string{"-f"}, nil, ErrUsage},
+		{[]string{"--formate"}, nil, ErrUsage},
+		{[]string{"-t"}, nil, ErrUsage},
+		{[]string{"--template"}, nil, ErrUsage},
+		{[]string{"--templates-dir"}, nil, ErrUsage},
+		{[]string{"-f", "json"}, nil, ErrUsage},
+		{[]string{"--format", "json"}, nil, ErrUsage},
+		{[]string{"-f", "text"}, nil, ErrUsage},
+		{[]string{"--format", "text"}, nil, ErrUsage},
+		{[]string{"-f", "xml"}, nil, errUnsupportedFormat},
+		{[]string{"--format", "xml"}, nil, errUnsupportedFormat},
+		{[]string{"-t", "json"}, nil, errInlineTemplate},
+		{[]string{"--template", "json"}, nil, errInlineTemplate},
+		{[]string{"--templates-dir", ".eol"}, nil, ErrUsage},
+		{[]string{"release"}, &client{command: "release"}, ErrUsage},
+		{[]string{"product"}, &client{command: "product"}, ErrUsage},
+		{[]string{"category"}, &client{command: "category"}, ErrUsage},
+		{[]string{"tag"}, &client{command: "tag"}, ErrUsage},
+		{[]string{"identifier"}, &client{command: "identifier"}, ErrUsage},
+		{[]string{"latest"}, &client{command: "latest"}, ErrUsage},
+		{[]string{"completion"}, &client{command: "completion-bash"}, nil},
+		{[]string{"categories"}, &client{command: "categories"}, nil},
+		{[]string{"tags"}, &client{command: "tags"}, nil},
+		{[]string{"identifiers"}, &client{command: "identifiers"}, nil},
+		{[]string{"index"}, &client{command: "index"}, nil},
+		{[]string{"index", "--templates-dir"}, &client{command: "index"}, ErrUsage},
+		{[]string{"release", "go"}, &client{command: "release", args: []string{"go"}}, ErrUsage},
+		{[]string{"release", "go", "1.24"}, &client{command: "release", args: []string{"go", "1.24"}}, nil},
+	}
+
+	for _, tc := range cases {
+		t.Run("", func(t *testing.T) {
+			t.Parallel()
+
+			c := &client{}
+			if err := c.parseFlags(tc.args); !errors.Is(err, tc.expErr) {
+				t.Fatalf("Expected error %v, got %v", tc.expErr, err)
+			} else if err == nil && (tc.exp == nil || !reflect.DeepEqual(c, tc.exp)) {
+				t.Fatalf("Expected client %+v, got %+v", tc.exp, c)
+			}
+		})
+	}
+}
+
+func TestClientExecuteTemplate(t *testing.T) {
+	t.Parallel()
+	t.Skip("Tested indirectly in TestClientHandle")
+}
+
+func TestLoadTemplates(t *testing.T) {
+	t.Parallel()
+	t.Skip("Tested indirectly in TestNew")
+}
+
+func TestClientDoRequest(t *testing.T) {
+	t.Parallel()
+	t.Skip("Tested indirectly in TestClientHandle")
+}
+
+func (m *mockHTTPClient) Do(r *http.Request) (w *http.Response, err error) {
+	fname := "index"
+	if r.URL.Path != "/" {
+		fname = strings.ReplaceAll(strings.TrimLeft(r.URL.Path, "/"), "/", "_")
+	}
+
+	fname = filepath.Join("testdata", "golden", fname)
+
+	content, err := os.ReadFile(fname)
+	if err == nil {
+		code := http.StatusOK
+		if bytes.Contains(content, []byte("Page not Found")) {
+			code = http.StatusNotFound
+			err = errNotFound
+		}
+
+		return &http.Response{
+			StatusCode: code,
+			Body:       io.NopCloser(bytes.NewReader(content)),
+		}, err
+	}
+
+	w, err = http.DefaultClient.Do(r)
+	if err == nil {
+		body, _ := io.ReadAll(w.Body)
+		os.WriteFile(fname, body, os.ModePerm)
+		w.Body = io.NopCloser(bytes.NewReader(body))
+	}
+
+	return
 }

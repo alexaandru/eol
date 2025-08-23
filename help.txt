@@ -1,0 +1,80 @@
+Usage:
+  eol [options] <command> [arguments]
+
+Commands:
+  index                           Show API endpoints
+  products                        List all products
+  products-full                   List all products with detailed information
+  product <name>                  Get details for a specific product
+  release <product> <release>     Get specific release information (automatic version fallback)
+  release-badge <product> <release> Generate SVG badge for specific release
+  latest <product>                Get latest release information
+  categories                      List all categories
+  category <name>                 List products in a specific category
+  tags                            List all tags
+  tag <name>                      List products with a specific tag
+  identifiers                     List all identifier types
+  identifier <type>               List identifiers by type
+  templates-export                Export templates to default location (~/.config/eol/templates or --templates-dir)
+  completion[-bash|-zsh]          Generate shell completion scripts (auto-detects shell if not specified)
+  version                         Show version information
+  help                            Show this help message
+
+Options:
+  -f, --format <format>           Output format (text, json)
+  -t, --template <template>       Inline template for custom output formatting
+  --templates-dir <dir>           Custom template directory, applicable to loading templates
+                                  as well as to exporting them
+
+Examples:
+  eol products
+  eol products-full # Preferably, use the /products endpoint to get a summary of
+                    # the products and reduce the amount of data transferred.
+  eol product ubuntu
+  eol release ubuntu 22.04 # or go 1.24.6, python 3.11.5, terraform 1.7.2, etc.
+  eol release-badge go 1.21 > go-1.21-badge.svg  # Generate SVG badge
+  eol latest ubuntu
+  eol categories
+  eol category os
+  eol tags
+  eol tag lang
+  eol identifiers
+  eol identifier cpe
+  eol version
+  eol -f json product ubuntu
+  eol -t '{{.name}} - {{.category}}' product ubuntu
+  eol --template '{{.name}}' latest go
+  eol -t '{{.name}}: {{if .isMaintained}}✅ Active{{else}}💀 EOL{{end}}' latest terraform
+  eol --template '{{join (toStringSlice .tags) ", "}}' product go
+  eol category os -t '{{join (toStringSlice (collect "name" .)) " "}}'  # Clean list from slice
+  eol release go 1.17 -t '{{if .isEol}}{{exit 1}}{{end}}'  # Exit code 1 if EOL (scripting)
+  eol templates-export
+  eol templates-export --templates-dir ~/my-templates
+  eval $(eol completion-bash)  # Load bash completion
+  eval $(eol completion-zsh)   # Load zsh completion
+
+Version Fallback:
+  When a specific version isn't found (404), the client automatically tries shorter versions:
+    1.24.999 → 1.24 → 1; 3.11.5 → 3.11 → 3; 2023.12 → 2023; etc.
+
+Template Customization:
+  eol --templates-dir ~/my-templates product go
+
+  Available template functions:
+    join (toStringSlice .tags) ", "      # Join arrays with separator
+    toJSON .                             # Convert to JSON format
+    eolWithin "6mo" .eolFrom             # Check if EOL is within duration (mo, wk, d)
+    dict "key1" "value1" "key2" "value2" # Create a dictionary
+    toStringSlice .field                 # Convert to string slice
+    collect "name" .                     # Extract field from slice of objects
+    add .a .b                            # Addition (integers)
+    mul .a .b                            # Multiplication (integers)
+    exit 1                               # Exit with error code (for scripting)
+
+  Custom duration formats for eolWithin: Go durations: 24h, 30m, etc. plus: d, wk, mo for days
+    weeks, months respectively.
+
+  Template directory structure:
+    Place custom .tmpl files in your template directory
+    File names should match command names (e.g., product.tmpl, release.tmpl)
+    Use {{define "templatename"}}...{{end}} if you want explicit template definitions

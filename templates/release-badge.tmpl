@@ -1,0 +1,38 @@
+{{- $leftText := .arg1 -}}
+{{- $rightText := .name -}}
+{{- $leftWidth := mul (len $leftText) 6 -}}
+{{- $rightWidth := mul (len $rightText) 6 -}}
+{{- $leftWidthPadded := add $leftWidth 20 -}}
+{{- $rightWidthPadded := add $rightWidth 20 -}}
+{{- $totalWidth := add $leftWidthPadded $rightWidthPadded -}}
+{{- $leftTextX := mul $leftWidthPadded 5 -}}
+{{- $rightTextX := add (mul $leftWidthPadded 10) (mul $rightWidthPadded 5) -}}
+{{- $leftTextLength := mul (len $leftText) 60 -}}
+{{- $rightTextLength := mul (len $rightText) 60 -}}
+{{- $badgeColor := "#28A745" -}}
+{{- if .isEol -}}{{$badgeColor = "#ff453a"}}
+{{- else if .isEoas -}}{{$badgeColor = "#ff8c00"}}
+{{- else if .isMaintained -}}{{$badgeColor = "#28A745"}}
+{{- else -}}{{$badgeColor = "#ff1493"}}
+{{- end -}}
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{{$totalWidth}}" height="20" role="img" aria-label="{{$leftText}}: {{$rightText}}">
+  <title>{{$leftText}}: {{$rightText}}</title>
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <clipPath id="r">
+    <rect width="{{$totalWidth}}" height="20" rx="3" fill="#fff"/>
+  </clipPath>
+  <g clip-path="url(#r)">
+    <rect width="{{$leftWidthPadded}}" height="20" fill="#555"/>
+    <rect x="{{$leftWidthPadded}}" width="{{$rightWidthPadded}}" height="20" fill="{{$badgeColor}}"/>
+    <rect width="{{$totalWidth}}" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110">
+    <text aria-hidden="true" x="{{$leftTextX}}" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="{{$leftTextLength}}">{{$leftText}}</text>
+    <text x="{{$leftTextX}}" y="140" transform="scale(.1)" fill="#fff" textLength="{{$leftTextLength}}">{{$leftText}}</text>
+    <text aria-hidden="true" x="{{$rightTextX}}" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="{{$rightTextLength}}">{{$rightText}}</text>
+    <text x="{{$rightTextX}}" y="140" transform="scale(.1)" fill="#ffffff" textLength="{{$rightTextLength}}">{{$rightText}}</text>
+  </g>
+</svg>

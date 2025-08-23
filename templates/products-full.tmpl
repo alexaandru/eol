@@ -1,0 +1,9 @@
+Full products details ({{len .}}):
+
+{{- $separator := "--------------------------------------------------------------------------------" }}
+{{- range $i, $product := . }}
+{{- if gt $i 0 }}
+{{$separator}}
+{{- end }}
+{{- template "product" $product }}
+{{- end }}

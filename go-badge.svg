@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="76" height="20" role="img" aria-label="go: 1.25">
+  <title>go: 1.25</title>
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <clipPath id="r">
+    <rect width="76" height="20" rx="3" fill="#fff"/>
+  </clipPath>
+  <g clip-path="url(#r)">
+    <rect width="32" height="20" fill="#555"/>
+    <rect x="32" width="44" height="20" fill="#28A745"/>
+    <rect width="76" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110">
+    <text aria-hidden="true" x="160" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="120">go</text>
+    <text x="160" y="140" transform="scale(.1)" fill="#fff" textLength="120">go</text>
+    <text aria-hidden="true" x="540" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="240">1.25</text>
+    <text x="540" y="140" transform="scale(.1)" fill="#ffffff" textLength="240">1.25</text>
+  </g>
+</svg>

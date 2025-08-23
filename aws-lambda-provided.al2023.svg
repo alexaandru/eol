@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="190" height="20" role="img" aria-label="aws-lambda: provided.al2023">
+  <title>aws-lambda: provided.al2023</title>
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <clipPath id="r">
+    <rect width="190" height="20" rx="3" fill="#fff"/>
+  </clipPath>
+  <g clip-path="url(#r)">
+    <rect width="80" height="20" fill="#555"/>
+    <rect x="80" width="110" height="20" fill="#28A745"/>
+    <rect width="190" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110">
+    <text aria-hidden="true" x="400" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="600">aws-lambda</text>
+    <text x="400" y="140" transform="scale(.1)" fill="#fff" textLength="600">aws-lambda</text>
+    <text aria-hidden="true" x="1350" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="900">provided.al2023</text>
+    <text x="1350" y="140" transform="scale(.1)" fill="#ffffff" textLength="900">provided.al2023</text>
+  </g>
+</svg>

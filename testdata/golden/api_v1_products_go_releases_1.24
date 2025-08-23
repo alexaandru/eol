@@ -1,0 +1,1 @@
+{"schema_version":"1.2.0","generated_at":"2025-08-27T13:14:55+00:00","result":{"name":"1.24","codename":null,"label":"1.24","releaseDate":"2025-02-11","isLts":false,"ltsFrom":null,"isEol":false,"eolFrom":null,"isMaintained":true,"latest":{"name":"1.24.6","date":"2025-08-06","link":"https://go.dev/doc/devel/release#go1.24.minor"},"custom":null}}

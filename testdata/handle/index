@@ -1,0 +1,4 @@
+API Endpoints (3):
+products     https://endoflife.date/api/v1/products
+categories   https://endoflife.date/api/v1/categories
+tags         https://endoflife.date/api/v1/tags
