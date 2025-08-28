@@ -19,7 +19,7 @@ type mockHTTPClient struct{}
 func TestNew(t *testing.T) {
 	t.Parallel()
 
-	c, _ := New([]string{"release", "go", "1.24", "-f", "text", "-t", "{{.}}"})
+	c, _ := newClient([]string{"release", "go", "1.24", "-f", "text", "-t", "{{.}}"})
 
 	if c.sink != os.Stdout {
 		t.Fatalf("Expected sink to be os.Stdout, got %v", c.sink)
@@ -91,14 +91,14 @@ func TestClientHandle(t *testing.T) {
 		{"completion-bash", nil},
 		{"completion-zsh", nil},
 		{"templates-export --templates-dir testdata/export1", nil},
-		{"bogus", ErrUsage},
+		{"bogus", errUsage},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.args, func(t *testing.T) {
 			t.Parallel()
 
-			c, err := New(strings.Split(tc.args, " "))
+			c, err := newClient(strings.Split(tc.args, " "))
 			if err != nil && !errors.Is(err, tc.expError) {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -111,7 +111,7 @@ func TestClientHandle(t *testing.T) {
 			c.sink = buf
 			c.httpClient = &mockHTTPClient{}
 
-			if err = c.Handle(); !errors.Is(err, tc.expError) { //nolint:nestif // ok
+			if err = c.handle(); !errors.Is(err, tc.expError) { //nolint:nestif // ok
 				t.Fatalf("Expected error %v, got %v", tc.expError, err)
 			} else if err == nil {
 				args := append([]string{c.command}, c.args...)
@@ -159,34 +159,34 @@ func TestClientParseFlags(t *testing.T) {
 		exp    *client
 		expErr error
 	}{
-		{nil, nil, ErrUsage},
-		{[]string{"-f"}, nil, ErrUsage},
-		{[]string{"--formate"}, nil, ErrUsage},
-		{[]string{"-t"}, nil, ErrUsage},
-		{[]string{"--template"}, nil, ErrUsage},
-		{[]string{"--templates-dir"}, nil, ErrUsage},
-		{[]string{"-f", "json"}, nil, ErrUsage},
-		{[]string{"--format", "json"}, nil, ErrUsage},
-		{[]string{"-f", "text"}, nil, ErrUsage},
-		{[]string{"--format", "text"}, nil, ErrUsage},
+		{nil, nil, errUsage},
+		{[]string{"-f"}, nil, errUsage},
+		{[]string{"--formate"}, nil, errUsage},
+		{[]string{"-t"}, nil, errUsage},
+		{[]string{"--template"}, nil, errUsage},
+		{[]string{"--templates-dir"}, nil, errUsage},
+		{[]string{"-f", "json"}, nil, errUsage},
+		{[]string{"--format", "json"}, nil, errUsage},
+		{[]string{"-f", "text"}, nil, errUsage},
+		{[]string{"--format", "text"}, nil, errUsage},
 		{[]string{"-f", "xml"}, nil, errUnsupportedFormat},
 		{[]string{"--format", "xml"}, nil, errUnsupportedFormat},
 		{[]string{"-t", "json"}, nil, errInlineTemplate},
 		{[]string{"--template", "json"}, nil, errInlineTemplate},
-		{[]string{"--templates-dir", ".eol"}, nil, ErrUsage},
-		{[]string{"release"}, &client{command: "release"}, ErrUsage},
-		{[]string{"product"}, &client{command: "product"}, ErrUsage},
-		{[]string{"category"}, &client{command: "category"}, ErrUsage},
-		{[]string{"tag"}, &client{command: "tag"}, ErrUsage},
-		{[]string{"identifier"}, &client{command: "identifier"}, ErrUsage},
-		{[]string{"latest"}, &client{command: "latest"}, ErrUsage},
+		{[]string{"--templates-dir", ".eol"}, nil, errUsage},
+		{[]string{"release"}, &client{command: "release"}, errUsage},
+		{[]string{"product"}, &client{command: "product"}, errUsage},
+		{[]string{"category"}, &client{command: "category"}, errUsage},
+		{[]string{"tag"}, &client{command: "tag"}, errUsage},
+		{[]string{"identifier"}, &client{command: "identifier"}, errUsage},
+		{[]string{"latest"}, &client{command: "latest"}, errUsage},
 		{[]string{"completion"}, &client{command: "completion-bash"}, nil},
 		{[]string{"categories"}, &client{command: "categories"}, nil},
 		{[]string{"tags"}, &client{command: "tags"}, nil},
 		{[]string{"identifiers"}, &client{command: "identifiers"}, nil},
 		{[]string{"index"}, &client{command: "index"}, nil},
-		{[]string{"index", "--templates-dir"}, &client{command: "index"}, ErrUsage},
-		{[]string{"release", "go"}, &client{command: "release", args: []string{"go"}}, ErrUsage},
+		{[]string{"index", "--templates-dir"}, &client{command: "index"}, errUsage},
+		{[]string{"release", "go"}, &client{command: "release", args: []string{"go"}}, errUsage},
 		{[]string{"release", "go", "1.24"}, &client{command: "release", args: []string{"go", "1.24"}}, nil},
 	}
 

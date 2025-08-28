@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Bash completion for eol CLI tool
-# Uses eol's own JSON API for dynamic completion
-
 _eol_get_products() {
     eol products -f json 2>/dev/null | jq -r '.result[]?.name // empty' 2>/dev/null || true
 }

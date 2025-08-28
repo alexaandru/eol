@@ -46,7 +46,6 @@ type outputFormat int
 // Default values.
 const (
 	DefaultTimeout = 30 * time.Second
-	UserAgent      = "eol-go-client/1.0.0"
 	DefaultBaseURL = "https://endoflife.date/api/v1"
 )
 
@@ -57,28 +56,26 @@ const (
 )
 
 //nolint:gochecknoglobals // ok
-var funcMap = template.FuncMap{
-	"join": strings.Join, "toJSON": toJSON, "eolWithin": eolWithin, "dict": dict,
-	"exit": func(code int) string { os.Exit(code); return "" }, "toStringSlice": toStringSlice,
-	"add": func(a, b int) int { return a + b }, "mul": func(a, b int) int { return a * b },
-	"collect": collect,
-}
-
-//nolint:gochecknoglobals // ok
 var (
+	funcMap = template.FuncMap{
+		"join": strings.Join, "toJSON": toJSON, "eolWithin": eolWithin, "dict": dict,
+		"exit": func(code int) string { os.Exit(code); return "" },
+		"add":  func(a, b int) int { return a + b }, "mul": func(a, b int) int { return a * b },
+		"collect": collect, "toStringSlice": toStringSlice,
+	}
 	rawOutput   = []string{"help", "version", "completion", "completion-bash", "completion-zsh", "templates-export"}
 	reCustomDur = regexp.MustCompile(`^(\d+)(d|wk|mo)$`)
+	userAgent   = "eol-go-client"
+	version     = "unk"
 )
 
-// All possible errors.
 var (
-	ErrNeedHelp = errors.New("help requested")
-	ErrUsage    = errors.New("usage error")
+	errUsage    = errors.New("usage error")
 	errNotFound = errors.New("not found")
 
 	// Usage errors.
-	errUnknownCommand    = fmt.Errorf("%w: unknown command", ErrUsage)
-	errUnsupportedFormat = fmt.Errorf("%w: unsupported format", ErrUsage)
+	errUnknownCommand    = fmt.Errorf("%w: unknown command", errUsage)
+	errUnsupportedFormat = fmt.Errorf("%w: unsupported format", errUsage)
 
 	// Operational errors.
 	errReleaseNotFound = errors.New("failed to find release for product")
@@ -93,8 +90,7 @@ var bashCompletionScript string
 //go:embed completions/zsh.sh
 var zshCompletionScript string
 
-// New creates a new endoflife.date API client with default settings.
-func New(args []string) (c *client, err error) {
+func newClient(args []string) (c *client, err error) {
 	baseURL, err := url.Parse(DefaultBaseURL)
 	if err != nil {
 		return
@@ -135,10 +131,8 @@ func New(args []string) (c *client, err error) {
 	return
 }
 
-// Handle represents the main entry point for handling commands.
-//
 //nolint:gocyclo,cyclop,funlen // ok
-func (c *client) Handle() (err error) {
+func (c *client) handle() (err error) {
 	c.response = nil
 	cmd := c.command
 
@@ -222,19 +216,14 @@ func (c *client) printHeader() { c.sink.Write([]byte("eol - EndOfLife.date API c
 func (c *client) printUsage() { c.sink.Write([]byte(helpText)) }
 
 func (c *client) printVersion() {
-	v := "unknown"
-	if info, ok := debug.ReadBuildInfo(); ok {
-		v = info.Main.Version
-	}
-
 	c.printHeader()
-	c.sink.Write([]byte(" " + v + "\n")) //nolint:errcheck,gosec // ok
+	c.sink.Write([]byte(" " + version + "\n")) //nolint:errcheck,gosec // ok
 }
 
 //nolint:gocognit,gocyclo,cyclop,funlen,nakedret // ok
 func (c *client) parseFlags(args []string) (err error) {
 	if len(args) == 0 {
-		return fmt.Errorf("%w: requires a command", ErrUsage)
+		return fmt.Errorf("%w: requires a command", errUsage)
 	}
 
 	for i := 0; i < len(args); i++ {
@@ -242,7 +231,7 @@ func (c *client) parseFlags(args []string) (err error) {
 		switch arg {
 		case "-f", "--format":
 			if i+1 >= len(args) {
-				return fmt.Errorf("%w: -f/--format requires a value", ErrUsage)
+				return fmt.Errorf("%w: -f/--format requires a value", errUsage)
 			}
 
 			i++
@@ -258,14 +247,14 @@ func (c *client) parseFlags(args []string) (err error) {
 			}
 		case "--templates-dir":
 			if i+1 >= len(args) {
-				return fmt.Errorf("%w: --templates-dir requires a directory path", ErrUsage)
+				return fmt.Errorf("%w: --templates-dir requires a directory path", errUsage)
 			}
 
 			c.templatesDir = args[i+1]
 			i++ // Skip the directory argument.
 		case "-t", "--template":
 			if i+1 >= len(args) {
-				return fmt.Errorf("%w: --template requires a template string", ErrUsage)
+				return fmt.Errorf("%w: --template requires a template string", errUsage)
 			}
 
 			c.inlineTemplate = args[i+1]
@@ -286,7 +275,7 @@ func (c *client) parseFlags(args []string) (err error) {
 	}
 
 	if c.command == "" {
-		return fmt.Errorf("%w: requires a command", ErrUsage)
+		return fmt.Errorf("%w: requires a command", errUsage)
 	}
 
 	switch c.command {
@@ -298,11 +287,11 @@ func (c *client) parseFlags(args []string) (err error) {
 		}
 	case "product", "category", "tag", "identifier", "latest":
 		if len(c.args) < 1 || c.args[0] == "" {
-			return fmt.Errorf("%w: %s command requires an argument", ErrUsage, c.command)
+			return fmt.Errorf("%w: %s command requires an argument", errUsage, c.command)
 		}
 	case "release", "release-badge":
 		if len(c.args) < 2 || c.args[0] == "" || c.args[1] == "" {
-			return fmt.Errorf("%w: %s command requires two arguments", ErrUsage, c.command)
+			return fmt.Errorf("%w: %s command requires two arguments", errUsage, c.command)
 		}
 	}
 
@@ -428,7 +417,7 @@ func (c *client) doRequest(endpoint string) (err error) {
 		return
 	}
 
-	req.Header.Set("User-Agent", UserAgent)
+	req.Header.Set("User-Agent", userAgent+"/"+version)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.Do(req)
@@ -448,4 +437,12 @@ func (c *client) doRequest(endpoint string) (err error) {
 	c.response, err = io.ReadAll(resp.Body)
 
 	return
+}
+
+//nolint:gochecknoinits // ok
+func init() {
+	info, ok := debug.ReadBuildInfo()
+	if ok {
+		version = info.Main.Version
+	}
 }

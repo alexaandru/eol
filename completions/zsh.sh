@@ -1,10 +1,5 @@
 #!/usr/bin/env zsh
 
-#compdef eol
-
-# Zsh completion for eol CLI tool
-# Uses eol's own JSON API for dynamic completion
-
 _eol_get_products() {
     local products
     products=(${(f)"$(eol products -f json 2>/dev/null | jq -r '.result[]?.name // empty' 2>/dev/null)"})
@@ -147,6 +142,3 @@ _eol_commands() {
     )
     _describe 'commands' commands
 }
-
-# When using eval, we need to explicitly register the completion
-compdef _eol eol

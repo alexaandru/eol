@@ -20,7 +20,7 @@ func main() {
 	defer func() {
 		switch {
 		case err == nil:
-		case errors.Is(err, ErrUsage):
+		case errors.Is(err, errUsage):
 			msg := err.Error()
 			msg, _ = strings.CutPrefix(msg, "usage error: ")
 			fmt.Printf("Error: %v!\n\n", msg)
@@ -32,10 +32,10 @@ func main() {
 		}
 	}()
 
-	c, err = New(os.Args[1:])
+	c, err = newClient(os.Args[1:])
 	if err != nil {
 		return
 	}
 
-	err = c.Handle()
+	err = c.handle()
 }

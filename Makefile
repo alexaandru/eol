@@ -1,4 +1,4 @@
-all: fmt lint actionlint vulncheck deadcode shellcheck test
+all: fmt lint actionlint vulncheck deadcode shellcheck test sample-badges
 
 test:
 	@go test -vet all -coverprofile=unit.cov -covermode=atomic -race -count=5 $(OPTS) ./...
@@ -38,6 +38,12 @@ doc:
 
 coverage_map: test
 	@go tool -modfile=tools/go.mod go-cover-treemap -coverprofile unit.cov > unit.svg
+
+sample-badges:
+	@go build . && \
+	  ./eol release-badge nokia c21 > nokia-c21.svg && \
+	  ./eol release-badge ubuntu 22.04 > ubuntu-22.04.svg && \
+	  ./eol release-badge aws-lambda provided.al2023 > aws-lambda-provided.al2023.svg
 
 clean:
 	@rm -f eol eol.test *.cov coverage.html
